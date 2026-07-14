@@ -9,8 +9,10 @@ class Config:
     persist_dir: str = "./chroma_db"
     collection_name: str = "kb_db"
     # Chunking / Retrieval
-    max_chunk_chars: int = 1200
-    top_k: int = 4
+    max_chunk_chars: int = 1800
+    top_k: int = 8
+    vector_candidate_k: int = 24
+    lexical_candidate_k: int = 24
     # Validation (rule cụ thể — HARDCODE là chấp nhận được)
     enable_validation: bool = True
     numeric_ratio_threshold: float = 0.6

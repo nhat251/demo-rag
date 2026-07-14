@@ -24,6 +24,18 @@ def init_session():
     return cfg
 
 
+def _format_source(source: dict) -> str:
+    details = []
+    if source.get("sheet"):
+        details.append(f"sheet {source['sheet']}")
+    if source.get("row"):
+        details.append(f"dòng {source['row']}")
+    if source.get("page"):
+        details.append(f"trang {source['page']}")
+    suffix = f" — {', '.join(details)}" if details else ""
+    return f"📄 {source['file']} ({source['loai']}){suffix}"
+
+
 st.set_page_config(page_title="Demo RAG Chatbot", layout="wide")
 st.title("Demo RAG Chatbot — Training 120'")
 
@@ -61,9 +73,6 @@ uploaded_files = st.file_uploader(
 if uploaded_files:
     for uploaded_file in uploaded_files:
         file_ext = os.path.splitext(uploaded_file.name)[1].lower()
-        if file_ext == ".pdf":
-            st.info(f"📄 PDF '{uploaded_file.name}' — sẽ được xử lý trực tiếp qua LLN.")
-            continue
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
             tmp.write(uploaded_file.getvalue())
@@ -71,7 +80,7 @@ if uploaded_files:
 
         try:
             records = extract_file(tmp_path)
-            findings = validate(tmp_path, cfg)
+            findings = validate(tmp_path, cfg) if file_ext == ".xlsx" else []
 
             if findings:
                 with st.expander(f"🔍 Kiểm tra đầu vào — {uploaded_file.name}", expanded=True):
@@ -123,7 +132,7 @@ for msg in st.session_state.messages:
         if "sources" in msg and msg["sources"]:
             with st.expander("Nguồn"):
                 for s in msg["sources"]:
-                    st.text(f"📄 {s['file']} ({s['loai']})")
+                    st.text(_format_source(s))
 
 if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -149,4 +158,4 @@ if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
         if sources:
             with st.expander("Nguồn"):
                 for s in sources:
-                    st.text(f"📄 {s['file']} ({s['loai']})")
+                    st.text(_format_source(s))

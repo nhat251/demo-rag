@@ -89,46 +89,63 @@ def main():
         print(f"  {fname}: {rec_count} records → {find_count} findings")
     print("  ✓ Extract → Validate: OK")
 
-    # === 5. API-DEPENDENT TESTS (cảnh báo nếu không chạy được) ===
-    print("\n[5] API-DEPENDENT (NORMALIZE + UPSERT + GENERATE)")
-    try:
-        from src.normalize import normalize_records
-        from src.rag_core import upsert_records, retrieve, generate_answer, list_loaded_files, reset_collection
-        from google import genai
-        from dotenv import load_dotenv
-        load_dotenv()
-        import os as _os
-        client = genai.Client(api_key=_os.environ.get("GEMINI_API_KEY", ""))
-        try:
-            client.models.list()
-            api_ok = True
-        except Exception:
-            api_ok = False
+    # === 5. LOCAL RETRIEVAL RANKING ===
+    print("\n[5] LOCAL RETRIEVAL RANKING")
+    from src.normalize import normalize_records
+    from src.rag_core import _lexical_score
 
-        if not api_ok:
-            print("  ⚠ API key không khả dụng — bỏ qua normalize/upsert/generate")
-        else:
-            reset_collection(cfg)
-            all_records_flat = []
-            for recs in all_records.values():
-                all_records_flat.extend(recs)
-            normalized = normalize_records(all_records_flat, cfg)
-            print(f"  Normalize: {len(normalized)} records")
-            chunks = upsert_records(normalized, cfg)
-            print(f"  Upsert: {chunks} chunks")
-            loaded = list_loaded_files(cfg)
-            print(f"  File đã nạp: {loaded}")
-            result = generate_answer("Thôn Hòa Trung có bao nhiêu hộ nghèo?", cfg)
-            if result["answer"]:
-                print(f"  Generate: ✓ (answer length: {len(result['answer'])})")
-            print("  ✓ API pipeline: OK")
-    except Exception as e:
-        print(f"  ⚠ API pipeline không chạy được: {e}")
+    all_records_flat = []
+    for recs in all_records.values():
+        all_records_flat.extend(recs)
+    normalized = normalize_records(all_records_flat, cfg)
+    query = "Thôn Hòa Trung có bao nhiêu hộ nghèo?"
+    ranked = sorted(
+        ((_lexical_score(query, r["noi_dung"]), r["noi_dung"]) for r in normalized),
+        reverse=True,
+    )
+    top_doc = ranked[0][1] if ranked else ""
+    lexical_ok = "Thôn Hòa Trung" in top_doc and "CT03" in top_doc and "Số hộ nghèo" in top_doc
+    print(f"  Top score: {ranked[0][0] if ranked else 0}")
+    print(f"  {'✓' if lexical_ok else '✗'} Query mẫu tìm đúng dòng Hòa Trung / CT03")
+
+    # === 6. API-DEPENDENT TESTS (optional) ===
+    print("\n[6] API-DEPENDENT (NORMALIZE + UPSERT + GENERATE)")
+    if os.environ.get("RUN_API_TESTS") != "1":
+        print("  Bỏ qua mặc định. Đặt RUN_API_TESTS=1 nếu muốn test Gemini + Chroma embedding.")
+    else:
+        try:
+            from src.rag_core import upsert_records, generate_answer, list_loaded_files, reset_collection
+            from google import genai
+            from dotenv import load_dotenv
+            load_dotenv()
+            import os as _os
+            client = genai.Client(api_key=_os.environ.get("GEMINI_API_KEY", ""))
+            try:
+                client.models.list()
+                api_ok = True
+            except Exception:
+                api_ok = False
+
+            if not api_ok:
+                print("  ⚠ API key không khả dụng — bỏ qua normalize/upsert/generate")
+            else:
+                reset_collection(cfg)
+                print(f"  Normalize: {len(normalized)} records")
+                chunks = upsert_records(normalized, cfg)
+                print(f"  Upsert: {chunks} chunks")
+                loaded = list_loaded_files(cfg)
+                print(f"  File đã nạp: {loaded}")
+                result = generate_answer("Thôn Hòa Trung có bao nhiêu hộ nghèo?", cfg)
+                if result["answer"]:
+                    print(f"  Generate: ✓ (answer length: {len(result['answer'])})")
+                print("  ✓ API pipeline: OK")
+        except Exception as e:
+            print(f"  ⚠ API pipeline không chạy được: {e}")
 
     # === KẾT LUẬN ===
     print("\n" + "=" * 60)
     print("KẾT QUẢ: SMOKE TEST ", end="")
-    if all(len(v) > 0 for v in all_records.values()):
+    if all(len(v) > 0 for v in all_records.values()) and lexical_ok:
         print("✓ PASSED (core modules)")
     else:
         print("✗ FAILED")
