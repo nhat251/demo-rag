@@ -368,6 +368,16 @@ def list_loaded_files(cfg: Config) -> list[str]:
         return []
 
 
+def delete_loaded_file(cfg: Config, source_file: str) -> int:
+    collection = get_collection(cfg)
+    existing = collection.get(where={"nguon_file": source_file}, limit=10000)
+    ids = existing.get("ids") or []
+    if not ids:
+        return 0
+    collection.delete(ids=ids)
+    return len(ids)
+
+
 def reset_collection(cfg: Config):
     try:
         client_db = chromadb.PersistentClient(path=cfg.persist_dir)

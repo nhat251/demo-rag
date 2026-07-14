@@ -10,7 +10,7 @@ from config import Config
 from src.extract import extract_file
 from src.validate import validate, summarize_with_ai
 from src.normalize import normalize_records
-from src.rag_core import upsert_records, generate_answer, list_loaded_files, reset_collection
+from src.rag_core import upsert_records, generate_answer, list_loaded_files, delete_loaded_file, reset_collection
 
 
 @st.cache_resource
@@ -50,12 +50,26 @@ with st.sidebar:
     else:
         st.error("✗ Thiếu GEMINI_API_KEY (.env)")
 
+    cfg.ai_validate = st.checkbox(
+        "Bật AI audit khi validate",
+        value=cfg.ai_validate,
+        disabled=not bool(api_key),
+        help="Rule engine vẫn chạy trước. AI audit chỉ phân tích thêm theo rulebook và có thể không ổn định tuyệt đối.",
+    )
+
     st.divider()
     st.subheader("File đã nạp")
     loaded_files = list_loaded_files(cfg)
     if loaded_files:
         for f in loaded_files:
-            st.text(f"📄 {f}")
+            col_file, col_delete = st.columns([4, 1])
+            with col_file:
+                st.text(f"📄 {f}")
+            with col_delete:
+                if st.button("Xóa", key=f"delete_source_{f}", help=f"Xóa riêng source {f}"):
+                    deleted = delete_loaded_file(cfg, f)
+                    st.toast(f"Đã xóa {deleted} chunks từ '{f}'")
+                    st.rerun()
     else:
         st.text("Chưa có file nào")
 
