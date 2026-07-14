@@ -56,7 +56,7 @@ def normalize_records(raw_records: list[dict], cfg: Config) -> list[dict]:
             if isinstance(parsed, list):
                 for item in parsed:
                     if isinstance(item, dict) and "noi_dung" in item:
-                        item["nguon_file"] = item.get("nguon_file", raw_records[i]["nguon_file"])
+                        item["nguon_file"] = raw_records[i]["nguon_file"]
                         if "loai" not in item:
                             item["loai"] = "so_lieu"
                         all_normalized.append(item)

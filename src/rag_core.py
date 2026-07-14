@@ -85,18 +85,20 @@ def upsert_records(records: list[dict], cfg: Config) -> int:
     all_metadatas = []
     all_nguon = []
 
+    global_idx = 0
     for record in records:
         noi_dung = record.get("noi_dung", "")
         nguon_file = record.get("nguon_file", "unknown")
         loai = record.get("loai", "van_ban")
 
         chunks = chunk_text(noi_dung, cfg)
-        for idx, chunk in enumerate(chunks):
-            doc_id = make_id(nguon_file, idx)
+        for chunk in chunks:
+            doc_id = make_id(nguon_file, global_idx)
             all_ids.append(doc_id)
             all_docs.append(chunk)
             all_metadatas.append({"nguon_file": nguon_file, "loai": loai})
             all_nguon.append(nguon_file)
+            global_idx += 1
 
     if not all_ids:
         return 0

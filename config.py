@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 @dataclass
 class Config:
     # Models
-    gen_model: str = "gemini-2.0-flash"
+    gen_model: str = "gemini-3.1-flash-lite"
     embed_model: str = "gemini-embedding-001"
     # Chroma
     persist_dir: str = "./chroma_db"
