@@ -87,7 +87,7 @@ if uploaded_files:
                     col1, col2 = st.columns([3, 1])
                     with col1:
                         df_findings = pd.DataFrame(findings)
-                        st.dataframe(df_findings, use_container_width=True)
+                        st.dataframe(df_findings, width="stretch")
 
                     with col2:
                         loai_counts = df_findings["loai_loi"].value_counts()
