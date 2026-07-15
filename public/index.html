@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demo RAG - Hỏi đáp dữ liệu</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="vendor/marked.umd.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>🧾 Demo RAG - Hỏi đáp dữ liệu</h1>
+      <p>Nạp file Excel/PDF, đặt câu hỏi và nhận câu trả lời kèm nguồn</p>
+    </header>
+
+    <section class="pipeline">
+      <div class="step" data-step="1">① Chunking</div>
+      <div class="arrow">→</div>
+      <div class="step" data-step="2">② Embedding</div>
+      <div class="arrow">→</div>
+      <div class="step" data-step="3">③ Vector DB</div>
+      <div class="arrow">→</div>
+      <div class="step" data-step="4">④ Similarity Search</div>
+      <div class="arrow">→</div>
+      <div class="step" data-step="5">⑤ Generate</div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab active" data-view="chat">💬 Hỏi đáp</button>
+      <button class="tab" data-view="store">📦 Kho dữ liệu đã lưu</button>
+    </nav>
+
+    <main id="view-chat">
+      <div class="left">
+        <div class="card">
+          <h2>Nạp dữ liệu vào hệ thống</h2>
+          <input type="file" id="fileInput" accept=".xlsx,.pdf" />
+          <button id="ingestBtn">📥 Nạp vào hệ thống</button>
+          <div id="ingestLog" class="log"></div>
+        </div>
+
+        <div class="card">
+          <h2>File đã nạp</h2>
+          <ul id="fileList"></ul>
+          <button id="resetBtn" class="danger">🗑 Xoá toàn bộ dữ liệu</button>
+        </div>
+      </div>
+
+      <div class="right card">
+        <h2>💬 Hỏi đáp</h2>
+        <div id="chat" class="chat"></div>
+        <div class="ask-row">
+          <input type="text" id="questionInput" placeholder="Nhập câu hỏi của bạn..." />
+          <button id="askBtn">Gửi</button>
+        </div>
+      </div>
+    </main>
+
+    <section id="view-store" class="card hidden">
+      <div class="store-head">
+        <h2>📦 Các chunk đang lưu trong Vector DB</h2>
+        <button id="refreshChunks">🔄 Tải lại</button>
+      </div>
+      <p id="storeInfo" class="muted"></p>
+      <div id="chunkList"></div>
+    </section>
+
+    <script src="app.js"></script>
+  </body>
+</html>

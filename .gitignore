@@ -1,5 +1,4 @@
+node_modules/
 .env
-__pycache__/
-*.pyc
-chroma_db/
-data/test_validate.xlsx
+store/
+uploads/

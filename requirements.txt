@@ -1,7 +1,0 @@
-google-genai>=1.10.0
-chromadb>=0.5.5
-pandas>=2.2.0
-openpyxl>=3.1.2
-pdfplumber>=0.11.0
-streamlit>=1.38.0
-python-dotenv>=1.0.1

@@ -1,0 +1,18 @@
+{
+  "name": "demo-rag-node",
+  "version": "1.0.0",
+  "description": "Demo RAG chatbot 5 buoc bang Node.js + Gemini",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google/genai": "^0.14.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "marked": "^18.0.6",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "xlsx": "^0.18.5"
+  }
+}
