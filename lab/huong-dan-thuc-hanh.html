@@ -198,9 +198,8 @@
           <a class="btn" href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">Mở Google AI Studio →</a>
         </div>
 
-        <!-- Thay src bằng ảnh screenshot trong images/ của bạn -->
-        <figure class="shot" data-ph="images/api-key-1.png">
-          <img src="images/api-key-1.png" alt="Màn hình lấy API key trên Google AI Studio" onerror="this.closest('figure').classList.add('empty')" />
+        <figure class="shot" data-ph="../public/images/api-key-1.png">
+          <img src="../public/images/api-key-1.png" alt="Màn hình lấy API key trên Google AI Studio" onerror="this.closest('figure').classList.add('empty')" />
           <figcaption>Trang quản lý API key trên Google AI Studio</figcaption>
         </figure>
 
@@ -210,19 +209,9 @@
           <li>Bấm nút <strong>Copy</strong> để sao chép API key vừa tạo.</li>
         </ol>
 
-        <!-- Thay src bằng ảnh screenshot trong images/ của bạn -->
-        <figure class="shot" data-ph="images/api-key-2.png">
-          <img src="images/api-key-2.png" alt="Bấm Create API key và Copy" onerror="this.closest('figure').classList.add('empty')" />
-          <figcaption>Bấm “Create API key” rồi Copy</figcaption>
-        </figure>
-
         <div class="callout sec">
           <span class="lbl">🔒 Giữ bí mật</span>
           API key là riêng tư. Không chia sẻ, không đưa vào ảnh chụp công khai, không commit lên GitHub. Nếu lỡ lộ, quay lại trang trên xoá key cũ và tạo key mới.
-        </div>
-        <div class="callout info">
-          <span class="lbl">💡 Về gói miễn phí</span>
-          Gemini API có bậc miễn phí đủ dùng cho buổi học. Nếu gặp lỗi <code class="inline">quota</code> hay <code class="inline">429</code> là bạn gọi quá nhanh — chờ một chút rồi thử lại.
         </div>
       </div>
     </div>
@@ -267,18 +256,18 @@ Hãy tạo đầy đủ các file: package.json, config.js, src/extract.js, src/
     <!-- STEP 3 -->
     <div class="step">
       <div class="marker">3</div>
-      <h3>Dùng AI để sinh code</h3>
-      <p class="sub">Dán prompt vào một trợ lý AI và để nó dựng dự án.</p>
+      <h3>Dùng Antigravity để sinh code</h3>
+      <p class="sub">Dán prompt, Antigravity tự tạo toàn bộ file — bạn không cần tự lưu.</p>
       <div class="body">
         <ol class="sub-steps">
-          <li>Mở một trợ lý AI có thể viết code (Claude, hoặc AI tích hợp trong editor của bạn).</li>
-          <li><strong>Dán prompt</strong> ở bước 2 vào và gửi.</li>
-          <li>AI trả về nội dung từng file. Tạo đúng cây thư mục và <strong>lưu từng file</strong> theo AI hướng dẫn.</li>
-          <li>Chỗ nào chưa rõ, cứ hỏi tiếp AI: “giải thích file <code class="inline">rag.js</code> giúp mình”, hoặc “mình gặp lỗi này…”.</li>
+          <li>Tạo một <strong>thư mục mới</strong> cho dự án (ví dụ <code class="inline">ba-na-rag</code>).</li>
+          <li>Mở <strong>Antigravity</strong> ngay tại thư mục đó.</li>
+          <li><strong>Dán prompt</strong> ở bước 2 vào khung chat và gửi.</li>
+          <li>Antigravity sẽ <strong>tự sinh và tạo toàn bộ file</strong> trong thư mục — bạn không phải copy hay lưu từng file thủ công.</li>
         </ol>
         <div class="callout info">
           <span class="lbl">💡 Mẹo</span>
-          Làm từng phần: xin AI dựng khung chạy được trước, rồi mới thêm UI. Chạy thử sớm để bắt lỗi sớm.
+          Chỗ nào chưa rõ, cứ hỏi tiếp ngay trong khung chat của Antigravity: “giải thích file <code class="inline">rag.js</code> giúp mình”, hoặc “mình gặp lỗi này…”.
         </div>
       </div>
     </div>
@@ -344,30 +333,6 @@ Hãy tạo đầy đủ các file: package.json, config.js, src/extract.js, src/
       <div class="p"><b>④ Similarity</b><div class="t">Tìm</div><div class="d">Tìm đoạn giống query</div></div>
       <div class="p"><b>⑤ Generation</b><div class="t">Sinh</div><div class="d">LLM viết câu trả lời</div></div>
     </div>
-  </div>
-
-  <div class="faq">
-    <h3>Gặp lỗi? Xem nhanh ở đây</h3>
-    <details class="q">
-      <summary>Sửa code xong chạy lại không thấy đổi gì (Windows)</summary>
-      <div class="a">Khả năng cao server cũ vẫn chạy nền, giữ cổng 3000. Tắt hẳn nó rồi chạy lại: mở PowerShell gõ <code>Get-Process node | Stop-Process -Force</code>, sau đó <code>npm start</code>.</div>
-    </details>
-    <details class="q">
-      <summary>Báo lỗi thiếu API key hoặc “API key not valid”</summary>
-      <div class="a">Kiểm tra file <code>.env</code> đúng thư mục gốc, tên biến đúng là <code>GEMINI_API_KEY</code>, không có dấu cách thừa, và đã copy đủ cả chuỗi key. Đổi key thì phải khởi động lại server.</div>
-    </details>
-    <details class="q">
-      <summary>Lỗi “quota” hoặc mã 429</summary>
-      <div class="a">Bạn gọi API quá nhanh so với bậc miễn phí. Chờ vài chục giây rồi thử lại, hoặc hỏi thưa hơn.</div>
-    </details>
-    <details class="q">
-      <summary>Chatbot trả lời “KHÔNG TÌM THẤY” dù dữ liệu có</summary>
-      <div class="a">Kiểm tra bạn đã <strong>Nạp dữ liệu</strong> thành công chưa (bước 6). Nếu vẫn không ra, thử hỏi bằng đúng từ trong file (tên thôn, tên cột), hoặc tăng <code>top_k</code> trong <code>config.js</code>.</div>
-    </details>
-    <details class="q">
-      <summary>Không upload được file Excel</summary>
-      <div class="a">Đảm bảo file đuôi <code>.xlsx</code> và không đang mở trong Excel. Thử file nhỏ trước.</div>
-    </details>
   </div>
 
   <footer>
