@@ -73,6 +73,7 @@
   .prep ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 26px; }
   @media (max-width: 620px) { .prep ul { grid-template-columns: 1fr; } }
   .prep li { padding-left: 30px; position: relative; font-size: 16px; }
+  .prep a { color: var(--accent); font-weight: 650; }
   .prep li::before { content: "✓"; position: absolute; left: 0; top: -1px; color: var(--good); font-weight: 800; background: var(--good-soft); width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
 
   .steps { position: relative; }
@@ -129,7 +130,7 @@
   details.prompt summary::before { content: "▸"; transition: transform .2s; }
   details.prompt[open] summary::before { transform: rotate(90deg); }
   details.prompt .pbox { position: relative; }
-  details.prompt pre { margin: 0; background: var(--code-bg); color: var(--code-fg); font-family: var(--font-mono); font-size: 13px; line-height: 1.55; padding: 18px 20px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+  details.prompt pre { margin: 0; background: var(--code-bg); color: var(--code-fg); font-family: var(--font-mono); font-size: 13px; line-height: 1.55; padding: 52px 20px 18px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
   details.prompt .copy { position: absolute; top: 12px; right: 12px; }
 
   .mini { background: var(--stage); border: 1px solid var(--line); border-radius: 16px; padding: 24px 26px; margin: 34px 0 0; }
@@ -179,7 +180,7 @@
     <h2>Cần chuẩn bị trước</h2>
     <ul>
       <li><strong>Node.js 18+</strong> đã cài (kiểm tra: <code class="inline">node -v</code>)</li>
-      <li><strong>Một editor</strong> — VS Code hoặc tương đương</li>
+      <li><strong>Antigravity IDE</strong> — <a href="https://antigravity.google/download#antigravity-ide" target="_blank" rel="noopener">tải tại đây</a> (hoặc Codex, VS Code,...)</li>
       <li><strong>Tài khoản Google</strong> (Gmail) để lấy API key</li>
       <li><strong>Trình duyệt</strong> để mở web app</li>
     </ul>
@@ -227,27 +228,60 @@
           <summary>Prompt khởi tạo dự án</summary>
           <div class="pbox">
             <button class="copy" data-copy-target="promptText">Sao chép</button>
-            <pre id="promptText">Bạn là senior Node.js developer. Hãy giúp mình xây một RAG chatbot đơn giản bằng Node.js để tra cứu dữ liệu từ file Excel. Code rõ ràng, đơn giản cho sinh viên, KHÔNG viết comment trong code.
+            <pre id="promptText">Bạn là senior Node.js developer. Hãy xây cho mình một RAG chatbot hoàn chỉnh bằng Node.js để tra cứu dữ liệu từ file Excel và PDF.
 
 TECH STACK:
 - Node.js (CommonJS, dùng require)
 - Google Gemini qua package @google/genai: embedding model "gemini-embedding-001", generation model "gemini-3.1-flash-lite"
-- Vector store: một file JSON (store/vectors.json) + hàm cosine similarity tự viết (KHÔNG dùng ChromaDB)
-- Đọc Excel bằng package "xlsx"
-- Web server bằng "express" + "multer" (upload file); UI tối giản trong public/
+- Vector store: một file JSON (store/vectors.json) + hàm cosine similarity tự viết (KHÔNG dùng ChromaDB hay database ngoài)
+- Đọc Excel bằng package "xlsx", đọc PDF bằng package "pdf-parse"
+- Web server bằng "express" + "multer" (file upload lưu vào thư mục uploads/); UI trong public/
+- Render câu trả lời dạng markdown trên UI bằng package "marked"
 - Đọc API key từ .env qua "dotenv" (biến GEMINI_API_KEY)
 
+CẤU TRÚC FILE (tạo đầy đủ):
+- package.json: script "start" chạy server.js, dùng ĐÚNG các version sau:
+  "dependencies": {
+    "@google/genai": "^0.14.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "marked": "^18.0.6",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "xlsx": "^0.18.5"
+  }
+- config.js: gom mọi hằng số (tên model, đường dẫn store, chunk size 1800, overlap 160, batch size 80, top_k 8)
+- src/extract.js: đọc file Excel (duyệt qua mọi sheet, trả về danh sách record theo từng row) và file PDF (trích text theo từng trang)
+- src/chunk.js: chuyển record thành text và cắt nhỏ khi quá dài
+- src/gemini.js: khởi tạo client Gemini, hàm embed theo batch và hàm generate
+- src/store.js: đọc/ghi store/vectors.json, hàm cosine similarity, hàm search
+- src/rag.js: ghép pipeline ingest và ask
+- server.js: express app + các API endpoint
+- public/index.html + public/app.js: giao diện web
+
 RAG PIPELINE 5 bước, tách hàm rõ ràng:
-1) Chunking: đọc Excel, mỗi row thành một text record dạng "Cột: giá trị | Cột: giá trị"; nếu record dài quá 1800 ký tự thì fixed-size chunking với overlap 160.
-2) Embedding: gọi Gemini embedContent theo batch 80, taskType "RETRIEVAL_DOCUMENT" khi index và "RETRIEVAL_QUERY" khi query.
-3) Vector store: lưu { text, embedding, source (file/sheet/row) } vào store/vectors.json.
-4) Similarity search: embed query, tính cosine similarity với mọi chunk, cộng thêm lexical/keyword score (hybrid retrieval), lấy top_k = 8.
-5) Generation: build prompt từ retrieved chunks + question, yêu cầu model "chỉ trả lời dựa trên context, nếu không có thì trả lời KHÔNG TÌM THẤY", gọi generateContent với temperature 0.
+1) Chunking: với Excel, mỗi row thành một text record dạng "Tên cột: giá trị | Tên cột: giá trị" (bỏ qua ô trống); với PDF, lấy text từng trang; record/trang nào dài quá 1800 ký tự thì cắt fixed-size với overlap 160 ký tự.
+2) Embedding: gọi Gemini embedContent theo batch 80 record một lần, taskType "RETRIEVAL_DOCUMENT" khi index và "RETRIEVAL_QUERY" khi query.
+3) Vector store: lưu mảng { text, embedding, source } vào store/vectors.json — source là { file, sheet, row } với Excel hoặc { file, page } với PDF; khi ingest file mới thì append thêm, không ghi đè dữ liệu cũ.
+4) Similarity search: embed câu hỏi, tính cosine similarity với mọi chunk, cộng thêm keyword score (đếm số từ của câu hỏi xuất hiện trong chunk) thành hybrid score, lấy top_k = 8 chunk điểm cao nhất.
+5) Generation: build prompt gồm các chunk retrieve được (kèm source) + câu hỏi; yêu cầu model CHỈ trả lời dựa trên context, nếu context không có thông tin thì trả lời đúng chuỗi "KHÔNG TÌM THẤY"; gọi generateContent với temperature 0.
 
-API ENDPOINTS: POST /api/ingest (upload Excel), POST /api/ask ({question}), GET /api/files, POST /api/reset.
-UI: upload Excel, một ô chat, hiển thị answer kèm source.
+API ENDPOINTS:
+- POST /api/ingest: nhận file Excel hoặc PDF (multipart, field "file"), chạy chunking + embedding + lưu vector store, trả về { file, chunks }
+- POST /api/ask: nhận JSON { question }, trả về { answer, sources: [{ ...source, score }] }
+- GET /api/files: danh sách file đã nạp kèm số chunk của mỗi file
+- POST /api/reset: xoá toàn bộ vector store
 
-Hãy tạo đầy đủ các file: package.json, config.js, src/extract.js, src/chunk.js, src/gemini.js, src/store.js, src/rag.js, server.js, public/index.html, public/app.js. Sau đó hướng dẫn mình các lệnh để chạy.</pre>
+UI (public/):
+- Khu upload file Excel/PDF + nút "Nạp vào hệ thống", có hiển thị trạng thái đang xử lý
+- Khung chat: ô nhập câu hỏi + nút gửi, hiển thị câu trả lời render bằng "marked" (markdown → HTML), kèm danh sách source (file, sheet/dòng hoặc trang)
+- Danh sách file đã nạp + nút reset dữ liệu
+
+YÊU CẦU KHÁC:
+- Xử lý lỗi rõ ràng: thiếu API key, file upload không phải Excel/PDF, hỏi khi store rỗng → trả về message dễ hiểu
+- Tạo sẵn file .env.example và .gitignore (bỏ qua node_modules, .env, store/, uploads/)
+
+Hãy tạo đầy đủ tất cả các file trên, sau đó hướng dẫn mình các lệnh để cài đặt và chạy.</pre>
           </div>
         </details>
       </div>
@@ -309,7 +343,7 @@ Hãy tạo đầy đủ các file: package.json, config.js, src/extract.js, src/
       <p class="sub">Đây là lúc thấy RAG hoạt động thật.</p>
       <div class="body">
         <ol class="sub-steps">
-          <li>Trên web app, <strong>tải lên</strong> một file Excel báo cáo.</li>
+          <li>Trên web app, <strong>tải lên</strong> một file Excel hoặc PDF báo cáo.</li>
           <li>Bấm <strong>Nạp vào hệ thống</strong> — chờ các bước Chunking → Embedding → Vector store chạy xong.</li>
           <li>Gõ một câu hỏi, ví dụ: <em>“Thôn Hòa Trung có bao nhiêu hộ nghèo?”</em></li>
           <li>Xem câu trả lời kèm <strong>source</strong> (file, sheet, dòng).</li>
