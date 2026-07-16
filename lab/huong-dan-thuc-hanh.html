@@ -270,12 +270,14 @@ API ENDPOINTS:
 - POST /api/ingest: nhận file Excel hoặc PDF (multipart, field "file"), chạy chunking + embedding + lưu vector store, trả về { file, chunks }
 - POST /api/ask: nhận JSON { question }, trả về { answer, sources: [{ ...source, score }] }
 - GET /api/files: danh sách file đã nạp kèm số chunk của mỗi file
+- GET /api/chunks: trả về danh sách chunk đã lưu trong vector store (chỉ gồm text + source, KHÔNG trả về embedding cho nhẹ); hỗ trợ query param ?file= để lọc theo file
 - POST /api/reset: xoá toàn bộ vector store
 
 UI (public/):
 - Khu upload file Excel/PDF + nút "Nạp vào hệ thống", có hiển thị trạng thái đang xử lý
 - Khung chat: ô nhập câu hỏi + nút gửi, hiển thị câu trả lời render bằng "marked" (markdown → HTML), kèm danh sách source (file, sheet/dòng hoặc trang)
 - Danh sách file đã nạp + nút reset dữ liệu
+- Khu "Kho dữ liệu đã lưu": xem các chunk đang có trong vector store (gọi GET /api/chunks), mỗi chunk hiển thị text + source, có dropdown lọc theo file; giúp người học nhìn thấy dữ liệu sau bước chunking trông như thế nào
 
 YÊU CẦU KHÁC:
 - Xử lý lỗi rõ ràng: thiếu API key, file upload không phải Excel/PDF, hỏi khi store rỗng → trả về message dễ hiểu
