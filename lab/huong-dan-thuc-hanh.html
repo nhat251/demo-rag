@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hướng dẫn thực hành — Xây RAG với AI</title>
+<style>
+  :root {
+    --bg: #EBF0F0;
+    --stage: #FFFFFF;
+    --ink: #10222A;
+    --muted: #566970;
+    --faint: #859299;
+    --line: #DCE4E4;
+    --line-strong: #C4D1D1;
+    --accent: #0C8B98;
+    --accent-2: #0FB0A0;
+    --accent-soft: #DEF1F1;
+    --gold: #B0761A;
+    --gold-soft: #F6E9CF;
+    --good: #2C9C66;
+    --good-soft: #E4F4EB;
+    --warn: #C67C0A;
+    --warn-soft: #FBEFD8;
+    --crit: #CF5044;
+    --crit-soft: #F9E4E1;
+    --code-bg: #0B191F;
+    --code-fg: #D3E0E3;
+    --code-line: #1D323B;
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "Cascadia Code", "JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #050F14; --stage: #0D1F27; --ink: #E9F1F2; --muted: #9FB2B8; --faint: #6C8088;
+      --line: #1B3740; --line-strong: #274853; --accent: #2BBCC7; --accent-2: #45D6C0; --accent-soft: #103038;
+      --gold: #E2AB4C; --gold-soft: #2C2413; --good: #46B67E; --good-soft: #16281E; --warn: #E0A233; --warn-soft: #2E2410;
+      --crit: #EA786B; --crit-soft: #331B19;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #EBF0F0; --stage: #FFFFFF; --ink: #10222A; --muted: #566970; --faint: #859299;
+    --line: #DCE4E4; --line-strong: #C4D1D1; --accent: #0C8B98; --accent-2: #0FB0A0; --accent-soft: #DEF1F1;
+    --gold: #B0761A; --gold-soft: #F6E9CF; --good: #2C9C66; --good-soft: #E4F4EB; --warn: #C67C0A; --warn-soft: #FBEFD8;
+    --crit: #CF5044; --crit-soft: #F9E4E1;
+  }
+  :root[data-theme="dark"] {
+    --bg: #050F14; --stage: #0D1F27; --ink: #E9F1F2; --muted: #9FB2B8; --faint: #6C8088;
+    --line: #1B3740; --line-strong: #274853; --accent: #2BBCC7; --accent-2: #45D6C0; --accent-soft: #103038;
+    --gold: #E2AB4C; --gold-soft: #2C2413; --good: #46B67E; --good-soft: #16281E; --warn: #E0A233; --warn-soft: #2E2410;
+    --crit: #EA786B; --crit-soft: #331B19;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  img { max-width: 100%; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 22px 80px; }
+
+  header.hero { position: relative; overflow: hidden; border-radius: 0 0 26px 26px; background: linear-gradient(150deg, var(--accent), var(--accent-2)); color: #fff; padding: 54px 40px 46px; margin-bottom: 40px; }
+  header.hero::after { content: ""; position: absolute; width: 460px; height: 460px; right: -160px; top: -200px; background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 62%); }
+  header.hero .inner { max-width: 860px; margin: 0 auto; position: relative; }
+  header.hero .eyebrow { font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 800; opacity: 0.9; }
+  header.hero h1 { font-size: clamp(28px, 4.4vw, 44px); line-height: 1.06; margin: 12px 0 14px; letter-spacing: -0.02em; font-weight: 850; text-wrap: balance; }
+  header.hero p { font-size: 18.5px; margin: 0; max-width: 60ch; opacity: 0.96; }
+  header.hero .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+  header.hero .chip { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.28); padding: 5px 13px; border-radius: 999px; font-size: 13px; font-weight: 650; }
+
+  .prep { background: var(--stage); border: 1px solid var(--line); border-radius: 16px; padding: 22px 26px; margin-bottom: 40px; box-shadow: 0 16px 34px -28px rgba(6,26,33,0.5); }
+  .prep h2 { font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  .prep ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 26px; }
+  @media (max-width: 620px) { .prep ul { grid-template-columns: 1fr; } }
+  .prep li { padding-left: 30px; position: relative; font-size: 16px; }
+  .prep li::before { content: "✓"; position: absolute; left: 0; top: -1px; color: var(--good); font-weight: 800; background: var(--good-soft); width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+
+  .steps { position: relative; }
+  .step { position: relative; padding: 0 0 14px 66px; }
+  .step::before { content: ""; position: absolute; left: 23px; top: 46px; bottom: -6px; width: 2px; background: var(--line-strong); }
+  .step:last-child::before { display: none; }
+  .step .marker { position: absolute; left: 0; top: 0; width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(145deg, var(--accent), var(--accent-2)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 21px; font-weight: 800; font-family: var(--font-mono); box-shadow: 0 10px 22px -12px var(--accent); }
+  .step h3 { font-size: 23px; margin: 4px 0 4px; letter-spacing: -0.01em; font-weight: 800; }
+  .step .sub { color: var(--muted); font-size: 15px; margin: 0 0 14px; }
+  .step .body { background: var(--stage); border: 1px solid var(--line); border-radius: 16px; padding: 22px 26px; margin-bottom: 8px; box-shadow: 0 14px 32px -30px rgba(6,26,33,0.5); }
+  .step .body p { margin: 0 0 12px; font-size: 16.5px; }
+  .step .body p:last-child { margin-bottom: 0; }
+
+  ol.sub-steps { margin: 4px 0 6px; padding-left: 0; list-style: none; counter-reset: s; }
+  ol.sub-steps li { counter-increment: s; position: relative; padding: 8px 0 8px 38px; font-size: 16.5px; border-bottom: 1px solid var(--line); }
+  ol.sub-steps li:last-child { border-bottom: none; }
+  ol.sub-steps li::before { content: counter(s); position: absolute; left: 0; top: 8px; width: 26px; height: 26px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); }
+  :root[data-theme="dark"] ol.sub-steps li::before { color: var(--ink); }
+
+  figure.shot { margin: 16px 0; }
+  figure.shot img { display: block; width: 100%; border: 1px solid var(--line-strong); border-radius: 12px; }
+  figure.shot figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; text-align: center; }
+  figure.shot.empty { border: 2px dashed var(--line-strong); border-radius: 12px; padding: 30px 16px; text-align: center; }
+  figure.shot.empty img, figure.shot.empty figcaption { display: none; }
+  figure.shot.empty::before { content: "🖼️  " attr(data-ph); font-size: 14px; color: var(--faint); }
+
+  .cmd { display: flex; align-items: center; gap: 10px; background: var(--code-bg); border: 1px solid var(--code-line); border-radius: 11px; padding: 12px 12px 12px 16px; margin: 12px 0; }
+  .cmd code { flex: 1; color: var(--code-fg); font-family: var(--font-mono); font-size: 14.5px; overflow-x: auto; white-space: pre; }
+  .copy { flex: 0 0 auto; background: rgba(255,255,255,0.08); color: var(--code-fg); border: 1px solid var(--code-line); border-radius: 8px; padding: 7px 13px; font-size: 13px; font-weight: 650; font-family: var(--font-sans); cursor: pointer; transition: all .15s; }
+  .copy:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .copy.done { background: var(--good); color: #fff; border-color: var(--good); }
+
+  a.btn { display: inline-flex; align-items: center; gap: 9px; background: linear-gradient(145deg, var(--accent), var(--accent-2)); color: #fff; text-decoration: none; font-weight: 750; font-size: 16px; padding: 13px 22px; border-radius: 12px; box-shadow: 0 12px 26px -14px var(--accent); }
+  a.btn:hover { filter: brightness(1.06); }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 6px 0 4px; }
+
+  .callout { border-radius: 12px; padding: 14px 18px; margin: 14px 0; font-size: 15.5px; border: 1px solid; }
+  .callout strong { font-weight: 750; }
+  .callout.info { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+  .callout.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+  .callout.sec { background: var(--crit-soft); border-color: color-mix(in srgb, var(--crit) 45%, var(--line)); }
+  .callout .lbl { font-weight: 800; letter-spacing: 0.03em; font-size: 12.5px; text-transform: uppercase; display: block; margin-bottom: 3px; }
+  .callout.info .lbl { color: var(--accent); }
+  .callout.warn .lbl { color: var(--warn); }
+  .callout.sec .lbl { color: var(--crit); }
+  :root[data-theme="dark"] .callout { color: var(--ink); }
+
+  code.inline { font-family: var(--font-mono); font-size: 0.87em; background: var(--accent-soft); color: var(--accent); padding: 1px 6px; border-radius: 5px; }
+  :root[data-theme="dark"] code.inline { color: var(--ink); }
+
+  details.prompt { margin: 6px 0 4px; border: 1px solid var(--line-strong); border-radius: 12px; overflow: hidden; }
+  details.prompt summary { cursor: pointer; padding: 13px 18px; font-weight: 700; font-size: 15.5px; background: var(--gold-soft); color: var(--gold); list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.prompt summary::-webkit-details-marker { display: none; }
+  details.prompt summary::before { content: "▸"; transition: transform .2s; }
+  details.prompt[open] summary::before { transform: rotate(90deg); }
+  details.prompt .pbox { position: relative; }
+  details.prompt pre { margin: 0; background: var(--code-bg); color: var(--code-fg); font-family: var(--font-mono); font-size: 13px; line-height: 1.55; padding: 18px 20px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+  details.prompt .copy { position: absolute; top: 12px; right: 12px; }
+
+  .mini { background: var(--stage); border: 1px solid var(--line); border-radius: 16px; padding: 24px 26px; margin: 34px 0 0; }
+  .mini h3 { margin: 0 0 16px; font-size: 20px; }
+  .pipe5 { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pipe5 .p { flex: 1; min-width: 120px; border: 1.5px solid var(--line-strong); border-radius: 11px; padding: 12px 14px; }
+  .pipe5 .p b { display: block; color: var(--gold); font-family: var(--font-mono); font-size: 15px; }
+  .pipe5 .p .t { font-weight: 750; font-size: 15px; margin-top: 2px; }
+  .pipe5 .p .d { font-size: 13px; color: var(--muted); }
+
+  .faq { margin-top: 38px; }
+  .faq h3 { font-size: 20px; margin: 0 0 14px; }
+  details.q { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; background: var(--stage); }
+  details.q summary { cursor: pointer; padding: 15px 18px; font-weight: 700; font-size: 16px; list-style: none; }
+  details.q summary::-webkit-details-marker { display: none; }
+  details.q summary::before { content: "＋"; color: var(--accent); font-weight: 800; margin-right: 10px; }
+  details.q[open] summary::before { content: "－"; }
+  details.q .a { padding: 0 18px 16px 44px; font-size: 15.5px; color: var(--muted); }
+  details.q .a code { font-family: var(--font-mono); font-size: 0.9em; }
+
+  footer { margin-top: 46px; text-align: center; color: var(--faint); font-size: 14px; }
+
+  .theme-toggle { position: fixed; top: 16px; right: 16px; z-index: 10; background: var(--stage); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 650; cursor: pointer; font-family: var(--font-sans); }
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle">◑ Đổi nền</button>
+
+<header class="hero">
+  <div class="inner">
+    <div class="eyebrow">Ba Na SmartLink · Workshop</div>
+    <h1>Tự xây Chatbot RAG với sự trợ giúp của AI</h1>
+    <p>Làm theo từng bước bên dưới: lấy API key miễn phí → dùng prompt có sẵn để AI sinh code → chạy và hỏi thử. Không cần thuộc code, chỉ cần follow.</p>
+    <div class="chips">
+      <span class="chip">⏱ ~30 phút</span>
+      <span class="chip">🆓 API miễn phí</span>
+      <span class="chip">🤖 Code cùng AI</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="prep">
+    <h2>Cần chuẩn bị trước</h2>
+    <ul>
+      <li><strong>Node.js 18+</strong> đã cài (kiểm tra: <code class="inline">node -v</code>)</li>
+      <li><strong>Một editor</strong> — VS Code hoặc tương đương</li>
+      <li><strong>Tài khoản Google</strong> (Gmail) để lấy API key</li>
+      <li><strong>Trình duyệt</strong> để mở web app</li>
+    </ul>
+  </div>
+
+  <div class="steps">
+
+    <!-- STEP 1 -->
+    <div class="step">
+      <div class="marker">1</div>
+      <h3>Lấy API key Gemini (miễn phí)</h3>
+      <p class="sub">Từ Google AI Studio — chỉ mất khoảng 1 phút.</p>
+      <div class="body">
+        <p>API key giống như mật khẩu để gọi Gemini. Bấm nút dưới để mở Google AI Studio, rồi làm theo ảnh minh hoạ:</p>
+        <div class="btn-row">
+          <a class="btn" href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">Mở Google AI Studio →</a>
+        </div>
+
+        <!-- Thay src bằng ảnh screenshot trong images/ của bạn -->
+        <figure class="shot" data-ph="images/api-key-1.png">
+          <img src="images/api-key-1.png" alt="Màn hình lấy API key trên Google AI Studio" onerror="this.closest('figure').classList.add('empty')" />
+          <figcaption>Trang quản lý API key trên Google AI Studio</figcaption>
+        </figure>
+
+        <ol class="sub-steps">
+          <li>Đăng nhập bằng tài khoản Google của bạn.</li>
+          <li>Bấm <strong>Create API key</strong>, chọn một project có sẵn hoặc để hệ thống tạo mới.</li>
+          <li>Bấm nút <strong>Copy</strong> để sao chép API key vừa tạo.</li>
+        </ol>
+
+        <!-- Thay src bằng ảnh screenshot trong images/ của bạn -->
+        <figure class="shot" data-ph="images/api-key-2.png">
+          <img src="images/api-key-2.png" alt="Bấm Create API key và Copy" onerror="this.closest('figure').classList.add('empty')" />
+          <figcaption>Bấm “Create API key” rồi Copy</figcaption>
+        </figure>
+
+        <div class="callout sec">
+          <span class="lbl">🔒 Giữ bí mật</span>
+          API key là riêng tư. Không chia sẻ, không đưa vào ảnh chụp công khai, không commit lên GitHub. Nếu lỡ lộ, quay lại trang trên xoá key cũ và tạo key mới.
+        </div>
+        <div class="callout info">
+          <span class="lbl">💡 Về gói miễn phí</span>
+          Gemini API có bậc miễn phí đủ dùng cho buổi học. Nếu gặp lỗi <code class="inline">quota</code> hay <code class="inline">429</code> là bạn gọi quá nhanh — chờ một chút rồi thử lại.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step">
+      <div class="marker">2</div>
+      <h3>Lấy prompt khởi tạo dự án</h3>
+      <p class="sub">Một đoạn “đề bài” viết sẵn để AI hiểu chính xác cần dựng gì.</p>
+      <div class="body">
+        <p>Chúng ta không gõ code từ đầu. Thay vào đó, đưa cho AI một prompt chuẩn mô tả đầy đủ dự án — AI sẽ sinh toàn bộ code. Sao chép prompt dưới đây:</p>
+        <details class="prompt" open>
+          <summary>Prompt khởi tạo dự án</summary>
+          <div class="pbox">
+            <button class="copy" data-copy-target="promptText">Sao chép</button>
+            <pre id="promptText">Bạn là senior Node.js developer. Hãy giúp mình xây một RAG chatbot đơn giản bằng Node.js để tra cứu dữ liệu từ file Excel. Code rõ ràng, đơn giản cho sinh viên, KHÔNG viết comment trong code.
+
+TECH STACK:
+- Node.js (CommonJS, dùng require)
+- Google Gemini qua package @google/genai: embedding model "gemini-embedding-001", generation model "gemini-3.1-flash-lite"
+- Vector store: một file JSON (store/vectors.json) + hàm cosine similarity tự viết (KHÔNG dùng ChromaDB)
+- Đọc Excel bằng package "xlsx"
+- Web server bằng "express" + "multer" (upload file); UI tối giản trong public/
+- Đọc API key từ .env qua "dotenv" (biến GEMINI_API_KEY)
+
+RAG PIPELINE 5 bước, tách hàm rõ ràng:
+1) Chunking: đọc Excel, mỗi row thành một text record dạng "Cột: giá trị | Cột: giá trị"; nếu record dài quá 1800 ký tự thì fixed-size chunking với overlap 160.
+2) Embedding: gọi Gemini embedContent theo batch 80, taskType "RETRIEVAL_DOCUMENT" khi index và "RETRIEVAL_QUERY" khi query.
+3) Vector store: lưu { text, embedding, source (file/sheet/row) } vào store/vectors.json.
+4) Similarity search: embed query, tính cosine similarity với mọi chunk, cộng thêm lexical/keyword score (hybrid retrieval), lấy top_k = 8.
+5) Generation: build prompt từ retrieved chunks + question, yêu cầu model "chỉ trả lời dựa trên context, nếu không có thì trả lời KHÔNG TÌM THẤY", gọi generateContent với temperature 0.
+
+API ENDPOINTS: POST /api/ingest (upload Excel), POST /api/ask ({question}), GET /api/files, POST /api/reset.
+UI: upload Excel, một ô chat, hiển thị answer kèm source.
+
+Hãy tạo đầy đủ các file: package.json, config.js, src/extract.js, src/chunk.js, src/gemini.js, src/store.js, src/rag.js, server.js, public/index.html, public/app.js. Sau đó hướng dẫn mình các lệnh để chạy.</pre>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step">
+      <div class="marker">3</div>
+      <h3>Dùng AI để sinh code</h3>
+      <p class="sub">Dán prompt vào một trợ lý AI và để nó dựng dự án.</p>
+      <div class="body">
+        <ol class="sub-steps">
+          <li>Mở một trợ lý AI có thể viết code (Claude, hoặc AI tích hợp trong editor của bạn).</li>
+          <li><strong>Dán prompt</strong> ở bước 2 vào và gửi.</li>
+          <li>AI trả về nội dung từng file. Tạo đúng cây thư mục và <strong>lưu từng file</strong> theo AI hướng dẫn.</li>
+          <li>Chỗ nào chưa rõ, cứ hỏi tiếp AI: “giải thích file <code class="inline">rag.js</code> giúp mình”, hoặc “mình gặp lỗi này…”.</li>
+        </ol>
+        <div class="callout info">
+          <span class="lbl">💡 Mẹo</span>
+          Làm từng phần: xin AI dựng khung chạy được trước, rồi mới thêm UI. Chạy thử sớm để bắt lỗi sớm.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step">
+      <div class="marker">4</div>
+      <h3>Cắm API key vào dự án</h3>
+      <p class="sub">Tạo file <code class="inline">.env</code> ở thư mục gốc dự án.</p>
+      <div class="body">
+        <p>Tạo file tên <code class="inline">.env</code>, dán API key của bạn vào:</p>
+        <div class="cmd"><code>GEMINI_API_KEY=dán_api_key_của_bạn_vào_đây</code><button class="copy" data-copy="GEMINI_API_KEY=">Sao chép</button></div>
+        <div class="callout sec">
+          <span class="lbl">🔒 Bắt buộc</span>
+          Thêm dòng <code class="inline">.env</code> vào file <code class="inline">.gitignore</code> để không đẩy key lên GitHub.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="step">
+      <div class="marker">5</div>
+      <h3>Cài thư viện &amp; chạy</h3>
+      <p class="sub">Hai lệnh trong terminal, tại thư mục dự án.</p>
+      <div class="body">
+        <p>Cài các thư viện:</p>
+        <div class="cmd"><code>npm install</code><button class="copy" data-copy="npm install">Sao chép</button></div>
+        <p>Khởi động server:</p>
+        <div class="cmd"><code>npm start</code><button class="copy" data-copy="npm start">Sao chép</button></div>
+        <p>Mở trình duyệt tại:</p>
+        <div class="cmd"><code>http://localhost:3000</code><button class="copy" data-copy="http://localhost:3000">Sao chép</button></div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="step">
+      <div class="marker">6</div>
+      <h3>Nạp dữ liệu &amp; hỏi thử</h3>
+      <p class="sub">Đây là lúc thấy RAG hoạt động thật.</p>
+      <div class="body">
+        <ol class="sub-steps">
+          <li>Trên web app, <strong>tải lên</strong> một file Excel báo cáo.</li>
+          <li>Bấm <strong>Nạp vào hệ thống</strong> — chờ các bước Chunking → Embedding → Vector store chạy xong.</li>
+          <li>Gõ một câu hỏi, ví dụ: <em>“Thôn Hòa Trung có bao nhiêu hộ nghèo?”</em></li>
+          <li>Xem câu trả lời kèm <strong>source</strong> (file, sheet, dòng).</li>
+          <li>Thử hỏi một thứ <strong>không có</strong> trong dữ liệu → hệ thống nói <em>“KHÔNG TÌM THẤY”</em> thay vì bịa.</li>
+        </ol>
+        <div class="callout info">
+          <span class="lbl">🎯 Bạn vừa chứng minh</span>
+          RAG trả lời đúng và <strong>giảm bịa</strong> — vì nó chỉ trả lời dựa trên dữ liệu thật được retrieve.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="mini">
+    <h3>Bạn vừa xây gì? — RAG pipeline 5 bước</h3>
+    <div class="pipe5">
+      <div class="p"><b>① Chunking</b><div class="t">Chia nhỏ</div><div class="d">Cắt dữ liệu thành đoạn nhỏ</div></div>
+      <div class="p"><b>② Embedding</b><div class="t">Nhúng</div><div class="d">Đoạn → vector số</div></div>
+      <div class="p"><b>③ Vector store</b><div class="t">Lưu</div><div class="d">Cất vector vào JSON</div></div>
+      <div class="p"><b>④ Similarity</b><div class="t">Tìm</div><div class="d">Tìm đoạn giống query</div></div>
+      <div class="p"><b>⑤ Generation</b><div class="t">Sinh</div><div class="d">LLM viết câu trả lời</div></div>
+    </div>
+  </div>
+
+  <div class="faq">
+    <h3>Gặp lỗi? Xem nhanh ở đây</h3>
+    <details class="q">
+      <summary>Sửa code xong chạy lại không thấy đổi gì (Windows)</summary>
+      <div class="a">Khả năng cao server cũ vẫn chạy nền, giữ cổng 3000. Tắt hẳn nó rồi chạy lại: mở PowerShell gõ <code>Get-Process node | Stop-Process -Force</code>, sau đó <code>npm start</code>.</div>
+    </details>
+    <details class="q">
+      <summary>Báo lỗi thiếu API key hoặc “API key not valid”</summary>
+      <div class="a">Kiểm tra file <code>.env</code> đúng thư mục gốc, tên biến đúng là <code>GEMINI_API_KEY</code>, không có dấu cách thừa, và đã copy đủ cả chuỗi key. Đổi key thì phải khởi động lại server.</div>
+    </details>
+    <details class="q">
+      <summary>Lỗi “quota” hoặc mã 429</summary>
+      <div class="a">Bạn gọi API quá nhanh so với bậc miễn phí. Chờ vài chục giây rồi thử lại, hoặc hỏi thưa hơn.</div>
+    </details>
+    <details class="q">
+      <summary>Chatbot trả lời “KHÔNG TÌM THẤY” dù dữ liệu có</summary>
+      <div class="a">Kiểm tra bạn đã <strong>Nạp dữ liệu</strong> thành công chưa (bước 6). Nếu vẫn không ra, thử hỏi bằng đúng từ trong file (tên thôn, tên cột), hoặc tăng <code>top_k</code> trong <code>config.js</code>.</div>
+    </details>
+    <details class="q">
+      <summary>Không upload được file Excel</summary>
+      <div class="a">Đảm bảo file đuôi <code>.xlsx</code> và không đang mở trong Excel. Thử file nhỏ trước.</div>
+    </details>
+  </div>
+
+  <footer>
+    Ba Na SmartLink · Hướng dẫn thực hành RAG
+  </footer>
+</div>
+
+<script>
+  function flash(btn) {
+    const old = btn.textContent;
+    btn.textContent = "Đã chép ✓";
+    btn.classList.add("done");
+    setTimeout(function () { btn.textContent = old; btn.classList.remove("done"); }, 1600);
+  }
+  function copyText(text, btn) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flash(btn); }).catch(fallback);
+    } else { fallback(); }
+    function fallback() {
+      var tmp = document.createElement("textarea");
+      tmp.value = text; document.body.appendChild(tmp); tmp.select();
+      try { document.execCommand("copy"); flash(btn); } catch (e) {}
+      document.body.removeChild(tmp);
+    }
+  }
+  document.querySelectorAll(".copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (btn.dataset.copy != null) copyText(btn.dataset.copy, btn);
+      else if (btn.dataset.copyTarget) {
+        var el = document.getElementById(btn.dataset.copyTarget);
+        if (el) copyText(el.textContent, btn);
+      }
+    });
+  });
+  document.getElementById("themeToggle").addEventListener("click", function () {
+    var root = document.documentElement;
+    var isDark = root.getAttribute("data-theme") === "dark"
+      || (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    root.setAttribute("data-theme", isDark ? "light" : "dark");
+  });
+</script>
+</body>
+</html>

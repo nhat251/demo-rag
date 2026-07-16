@@ -1,0 +1,1027 @@
+<title>RAG Chatbot — Ba Na SmartLink</title>
+<style>
+  :root {
+    --bg: #D7E0E0;
+    --stage: #FFFFFF;
+    --ink: #10222A;
+    --muted: #566970;
+    --faint: #859299;
+    --line: #DCE4E4;
+    --line-strong: #C4D1D1;
+    --accent: #0C8B98;
+    --accent-2: #0FB0A0;
+    --accent-soft: #DEF1F1;
+    --gold: #B0761A;
+    --gold-soft: #F6E9CF;
+    --good: #2C9C66;
+    --warn: #C67C0A;
+    --crit: #CF5044;
+    --crit-soft: #F9E4E1;
+    --code-bg: #0B191F;
+    --code-fg: #D3E0E3;
+    --code-line: #1D323B;
+    --tok-key: #7CC5FF;
+    --tok-str: #85E58C;
+    --tok-num: #F2BC6E;
+    --tok-com: #7B8E96;
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "Cascadia Code", "JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #050F14;
+      --stage: #0D1F27;
+      --ink: #E9F1F2;
+      --muted: #9FB2B8;
+      --faint: #6C8088;
+      --line: #1B3740;
+      --line-strong: #274853;
+      --accent: #2BBCC7;
+      --accent-2: #45D6C0;
+      --accent-soft: #103038;
+      --gold: #E2AB4C;
+      --gold-soft: #2C2413;
+      --good: #46B67E;
+      --warn: #E0A233;
+      --crit: #EA786B;
+      --crit-soft: #331B19;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #D7E0E0; --stage: #FFFFFF; --ink: #10222A; --muted: #566970; --faint: #859299;
+    --line: #DCE4E4; --line-strong: #C4D1D1; --accent: #0C8B98; --accent-2: #0FB0A0; --accent-soft: #DEF1F1;
+    --gold: #B0761A; --gold-soft: #F6E9CF; --good: #2C9C66; --warn: #C67C0A; --crit: #CF5044; --crit-soft: #F9E4E1;
+  }
+  :root[data-theme="dark"] {
+    --bg: #050F14; --stage: #0D1F27; --ink: #E9F1F2; --muted: #9FB2B8; --faint: #6C8088;
+    --line: #1B3740; --line-strong: #274853; --accent: #2BBCC7; --accent-2: #45D6C0; --accent-soft: #103038;
+    --gold: #E2AB4C; --gold-soft: #2C2413; --good: #46B67E; --warn: #E0A233; --crit: #EA786B; --crit-soft: #331B19;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+  .deck { height: 100vh; display: flex; flex-direction: column; }
+  .topbar { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; padding: 14px 30px 0; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 800; color: var(--accent); }
+  .topbar .brand { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+  .topbar .spacer { flex: 1; }
+  .counter { font-family: var(--font-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .progress { height: 3px; background: var(--line); margin: 10px 30px 0; border-radius: 3px; overflow: hidden; }
+  .progress > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.35s ease; }
+
+  .stage { flex: 1 1 auto; position: relative; padding: 8px 30px 18px; min-height: 0; }
+  .slide {
+    position: absolute; inset: 8px 30px 18px; display: none; flex-direction: column;
+    background: var(--stage); border: 1px solid var(--line); border-radius: 18px;
+    padding: 40px 56px; overflow-y: auto;
+    box-shadow: 0 24px 50px -34px rgba(6, 26, 33, 0.55);
+  }
+  .slide.active { display: flex; animation: rise 0.36s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .slide.active { animation: none; } .progress > span { transition: none; } }
+
+  .hero { position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; width: 720px; height: 720px; right: -220px; top: -280px;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent), transparent 62%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: ""; position: absolute; width: 520px; height: 520px; left: -200px; bottom: -260px;
+    background: radial-gradient(circle, color-mix(in srgb, var(--gold) 22%, transparent), transparent 60%);
+    pointer-events: none;
+  }
+
+  .kicker { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 800; color: var(--gold); margin-bottom: 14px; display: inline-flex; align-items: center; gap: 10px; }
+  .kicker .num { background: var(--gold); color: #fff; width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); }
+  h1 { font-size: clamp(34px, 5vw, 62px); line-height: 1.02; margin: 0 0 20px; letter-spacing: -0.025em; text-wrap: balance; font-weight: 850; position: relative; }
+  h2 { font-size: clamp(26px, 3.3vw, 40px); line-height: 1.1; margin: 0 0 22px; letter-spacing: -0.02em; text-wrap: balance; font-weight: 800; position: relative; }
+  h3 { font-size: 19px; margin: 0 0 10px; font-weight: 750; }
+  h4 { font-size: 17px; margin: 0 0 6px; font-weight: 750; }
+  p { font-size: 18.5px; line-height: 1.6; margin: 0 0 14px; max-width: 64ch; }
+  .lead { font-size: 22px; line-height: 1.5; color: var(--muted); max-width: 62ch; font-weight: 450; }
+  strong { font-weight: 750; }
+  .accent { color: var(--accent); }
+  .gold { color: var(--gold); }
+  .crit { color: var(--crit); }
+
+  .grad { background: linear-gradient(96deg, var(--accent), var(--accent-2) 60%, var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  ul.clean { list-style: none; padding: 0; margin: 0 0 14px; }
+  ul.clean li { font-size: 18.5px; line-height: 1.5; padding: 9px 0 9px 30px; position: relative; max-width: 66ch; border-bottom: 1px solid var(--line); }
+  ul.clean li:last-child { border-bottom: none; }
+  ul.clean li::before { content: ""; position: absolute; left: 4px; top: 18px; width: 9px; height: 9px; border-radius: 3px; background: var(--accent); }
+  ul.pain li::before { background: var(--crit); border-radius: 50%; }
+
+  .pipe { display: flex; align-items: stretch; gap: 9px; flex-wrap: wrap; margin: 4px 0 26px; }
+  .pipe .p { flex: 1; min-width: 118px; border: 1.5px solid var(--line-strong); border-radius: 12px; padding: 13px 15px; background: var(--stage); transition: transform .2s; }
+  .pipe .p .n { font-family: var(--font-mono); font-weight: 700; color: var(--gold); font-size: 16px; }
+  .pipe .p .en { font-weight: 750; font-size: 15px; margin-top: 3px; }
+  .pipe .p .vi { font-size: 13px; color: var(--muted); }
+  .pipe .p.on { background: linear-gradient(150deg, var(--accent), var(--accent-2)); border-color: transparent; transform: translateY(-3px); box-shadow: 0 12px 26px -14px var(--accent); }
+  .pipe .p.on .n, .pipe .p.on .en, .pipe .p.on .vi { color: #fff; }
+  .pipe .p.on .n { opacity: 0.85; }
+  .pipe .p.on .vi { opacity: 0.92; }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+  .two.wl { grid-template-columns: 1.3fr 1fr; }
+  @media (max-width: 900px) { .two, .two.wl { grid-template-columns: 1fr; } }
+
+  pre.code { background: var(--code-bg); color: var(--code-fg); border-radius: 13px; padding: 18px 20px; font-family: var(--font-mono); font-size: 14.5px; line-height: 1.6; overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--code-line); tab-size: 2; }
+  pre.code.sm { font-size: 13px; line-height: 1.55; }
+  .tok-key { color: var(--tok-key); }
+  .tok-str { color: var(--tok-str); }
+  .tok-num { color: var(--tok-num); }
+  .tok-com { color: var(--tok-com); font-style: italic; }
+
+  .card { border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; background: var(--stage); }
+  .card h3 { color: var(--accent); }
+  .card.warn-card { border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); background: var(--crit-soft); }
+  .card.warn-card h3 { color: var(--crit); }
+  .card.good-card { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); background: color-mix(in srgb, var(--good) 8%, var(--stage)); }
+  .card.good-card h3 { color: var(--good); }
+
+  .explain { list-style: none; padding: 0; margin: 0; }
+  .explain li { font-size: 15.5px; line-height: 1.5; padding: 7px 0 7px 24px; position: relative; border-bottom: 1px solid var(--line); }
+  .explain li:last-child { border-bottom: none; }
+  .explain li::before { content: "→"; position: absolute; left: 0; top: 7px; color: var(--accent); font-weight: 800; }
+  code { font-family: var(--font-mono); font-size: 0.86em; background: var(--accent-soft); color: var(--accent); padding: 1px 6px; border-radius: 5px; }
+  :root[data-theme="dark"] code { color: var(--ink); }
+
+  table.grid { width: 100%; border-collapse: collapse; margin: 4px 0 14px; font-size: 16.5px; }
+  table.grid th, table.grid td { border: 1px solid var(--line); padding: 12px 15px; text-align: left; vertical-align: top; line-height: 1.45; }
+  table.grid th { background: var(--accent-soft); font-weight: 750; font-size: 14px; letter-spacing: 0.02em; }
+  :root[data-theme="dark"] table.grid th { color: var(--ink); }
+  table.grid td.yes { color: var(--good); font-weight: 700; }
+  table.grid td.no { color: var(--crit); font-weight: 700; }
+  table.grid tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 22%, transparent); }
+
+  .tag { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; padding: 4px 12px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); }
+  .tag.ok { background: var(--accent-soft); color: var(--accent); }
+  .tag.crit { background: var(--crit-soft); color: var(--crit); }
+
+  .opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 22px 0 18px; }
+  .opts.four { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 900px) { .opts, .opts.four { grid-template-columns: 1fr; } }
+  .opt { border: 1.5px solid var(--line); border-radius: 14px; padding: 20px 18px 16px; position: relative; background: var(--stage); }
+  .opt .badge { position: absolute; top: -11px; left: 16px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 999px; background: var(--line); color: var(--muted); }
+  .opt h4 { margin: 4px 0 8px; }
+  .opt p { font-size: 14.5px; color: var(--muted); margin: 0; max-width: none; line-height: 1.45; }
+  .opt.chosen { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 60%, var(--stage)); box-shadow: 0 16px 36px -22px var(--accent); }
+  .opt.chosen .badge { background: linear-gradient(120deg, var(--accent), var(--accent-2)); color: #fff; }
+  .opt.chosen h4 { color: var(--accent); }
+  .opt.pick2 { border-color: var(--gold); background: color-mix(in srgb, var(--gold-soft) 45%, var(--stage)); }
+  .opt.pick2 .badge { background: linear-gradient(120deg, var(--gold), color-mix(in srgb, var(--gold) 70%, var(--accent))); color: #fff; }
+  .opt.pick2 h4 { color: var(--gold); }
+
+  .why { border-left: 4px solid var(--gold); background: color-mix(in srgb, var(--gold-soft) 55%, transparent); border-radius: 0 12px 12px 0; padding: 14px 20px; margin-top: 4px; }
+  .why h3 { color: var(--gold); margin-bottom: 6px; font-size: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .why p { margin: 0; font-size: 17px; max-width: 82ch; }
+  .why ul.clean li { border: none; padding: 4px 0 4px 26px; font-size: 16.5px; }
+
+  .flow { display: flex; flex-direction: column; gap: 9px; font-family: var(--font-mono); font-size: 14px; }
+  .flow .box { border: 1.5px solid var(--line-strong); border-radius: 11px; padding: 12px 16px; background: var(--stage); }
+  .flow .box.hl { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .flow .arrow { text-align: center; color: var(--faint); font-size: 17px; }
+
+  .tree { font-family: var(--font-mono); font-size: 15px; line-height: 1.7; background: var(--code-bg); color: var(--code-fg); border-radius: 13px; padding: 22px 26px; border: 1px solid var(--code-line); overflow-x: auto; white-space: pre; }
+  .tree .c { color: var(--tok-com); }
+
+  .formula { font-family: var(--font-mono); font-size: 24px; text-align: center; padding: 18px; background: var(--code-bg); color: var(--code-fg); border-radius: 13px; border: 1px solid var(--code-line); margin: 0 0 14px; }
+  .formula .b { color: var(--accent-2); }
+
+  .bignum { font-size: clamp(40px, 6vw, 76px); font-weight: 850; line-height: 1; letter-spacing: -0.03em; }
+
+  .controls { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 0 30px 16px; }
+  .controls button { font-family: var(--font-sans); font-size: 14px; font-weight: 650; border: 1px solid var(--line-strong); background: var(--stage); color: var(--ink); padding: 9px 16px; border-radius: 10px; cursor: pointer; transition: all .15s; }
+  .controls button:hover { border-color: var(--accent); color: var(--accent); }
+  .controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .controls .hint { font-size: 13px; color: var(--faint); margin-left: auto; }
+  .controls .hint kbd { font-family: var(--font-mono); background: var(--line); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--muted); }
+
+  .title-wrap { display: flex; flex-direction: column; justify-content: center; height: 100%; position: relative; z-index: 1; }
+  .title-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+  .mnemonic { font-size: clamp(24px, 3.4vw, 38px); font-weight: 850; letter-spacing: -0.01em; }
+  .mnemonic .sep { color: var(--faint); font-weight: 400; margin: 0 10px; }
+  .fill { flex: 1; }
+</style>
+
+<div class="deck">
+  <div class="topbar">
+    <span class="eyebrow" id="sectionLabel">RAG</span>
+    <span class="brand">Ba Na SmartLink</span>
+    <div class="spacer"></div>
+    <span class="counter"><span id="cur">1</span> / <span id="total">1</span></span>
+  </div>
+  <div class="progress"><span id="progressBar"></span></div>
+
+  <div class="stage" id="stage">
+
+    <!-- 1 TITLE -->
+    <section class="slide hero" data-section="Mở đầu">
+      <div class="title-wrap">
+        <div class="kicker">DUETECH AI Contest 2026</div>
+        <h1>Xây dựng Chatbot AI với<br><span class="grad">Retrieval-Augmented Generation</span></h1>
+        <p class="lead">Cùng xây một trợ lý AI biết đọc dữ liệu thật của xã Bà Nà — 22 thôn, 25.000 dân — và trả lời <strong>có dẫn nguồn</strong>, không bịa.</p>
+        <div class="title-meta">
+          <span class="tag ok">Node.js</span>
+          <span class="tag ok">Google Gemini</span>
+          <span class="tag ok">Vector Search</span>
+          <span class="tag">Hands-on Workshop</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 HOOK -->
+    <section class="slide" data-section="1 · Bối cảnh">
+      <div class="kicker"><span class="num">01</span> Bối cảnh</div>
+      <h2>Một câu hỏi tưởng đơn giản</h2>
+      <div class="card warn-card" style="margin-bottom:22px">
+        <p style="margin:0; font-size:22px"><strong>"Thôn Hòa Ninh đã nộp báo cáo dân số quý này chưa?"</strong></p>
+      </div>
+      <p class="lead" style="margin-bottom:18px">Nếu hỏi thẳng ChatGPT / Gemini — AI có trả lời được không?</p>
+      <ul class="clean">
+        <li>LLM chỉ biết dữ liệu công khai đến một thời điểm (<strong>knowledge cutoff</strong>).</li>
+        <li>Nó <strong>không biết</strong> file Excel báo cáo, công văn, hay tiến độ nộp của từng thôn.</li>
+        <li>Và <strong>không tự cập nhật</strong> khi có báo cáo mới mỗi ngày.</li>
+      </ul>
+    </section>
+
+    <!-- 3 REAL PROBLEM -->
+    <section class="slide" data-section="1 · Bối cảnh">
+      <div class="kicker"><span class="num">01</span> Nỗi đau có thật</div>
+      <h2>Quy trình báo cáo Thôn – Xã hôm nay</h2>
+      <div class="two wl">
+        <ul class="clean pain">
+          <li>Xã tạo biểu mẫu Excel, gửi 22 thôn qua <strong>Zalo</strong>.</li>
+          <li>Thôn ghi tay, gửi lại bằng <strong>ảnh chụp</strong> hoặc tin nhắn.</li>
+          <li>Cán bộ tải ảnh, nhập lại Excel thủ công — <strong>~4 giờ mỗi đợt</strong>.</li>
+          <li>Không có công cụ theo dõi thôn nào <strong>chưa nộp / trễ hạn</strong>.</li>
+          <li>Dữ liệu phân tán qua Zalo, Word, Excel, ảnh — <strong>chưa có kho chung</strong>.</li>
+        </ul>
+        <div class="card">
+          <div class="flow">
+            <div class="box">Cán bộ &amp; người dân</div>
+            <div class="arrow">↓ đặt câu hỏi</div>
+            <div class="box hl" style="text-align:center; font-size:26px">???</div>
+            <div class="arrow">↓</div>
+            <div class="box">Câu trả lời đúng, có nguồn</div>
+          </div>
+          <p style="font-size:14.5px; color:var(--muted); margin:14px 0 0">Dấu <strong>"???"</strong> chính là thứ chúng ta sẽ xây hôm nay.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 WHY LLM FAILS + HALLUCINATION -->
+    <section class="slide" data-section="1 · Bối cảnh">
+      <div class="kicker"><span class="num">01</span> Rủi ro</div>
+      <h2>Vì sao LLM "chay" nguy hiểm ở đây</h2>
+      <p class="lead" style="margin-bottom:20px">Khi không có dữ liệu thật, LLM vẫn trả lời — bằng cách <span class="crit">bịa ra thứ nghe hợp lý</span> (<em>hallucination</em>).</p>
+      <div class="two">
+        <div class="card warn-card">
+          <h3>Nhắc nhầm thôn</h3>
+          <p style="margin:0">Hỏi <em>"thôn nào chưa nộp?"</em> → AI đoán bừa tên một thôn <strong>đã nộp rồi</strong> → cán bộ nhắc nhầm, gây hiểu lầm.</p>
+        </div>
+        <div class="card warn-card">
+          <h3>Sai quy định nghiệp vụ</h3>
+          <p style="margin:0">Trả lời sai một điều trong công văn → cán bộ thôn <strong>làm sai quy trình</strong> cả đợt báo cáo.</p>
+        </div>
+      </div>
+      <p style="margin-top:20px">Trong hành chính, một câu bịa có <strong>hậu quả thật</strong>. Ta cần AI trả lời <span class="accent">chỉ dựa trên dữ liệu được cung cấp.</span></p>
+    </section>
+
+    <!-- 5 FINE-TUNE VS RAG -->
+    <section class="slide" data-section="1 · Bối cảnh">
+      <div class="kicker"><span class="num">01</span> Hai hướng đi</div>
+      <h2>Dạy lại mô hình, hay đưa tài liệu cho nó đọc?</h2>
+      <div class="opts">
+        <div class="opt">
+          <span class="badge">Cách 1</span>
+          <h4>Fine-tuning</h4>
+          <p>Nhồi dữ liệu xã vào, huấn luyện lại mô hình. Cập nhật khó, chi phí cao, khó truy nguồn.</p>
+        </div>
+        <div class="opt chosen">
+          <span class="badge">CHỌN</span>
+          <h4>RAG</h4>
+          <p>Để dữ liệu bên ngoài, tra cứu đúng đoạn liên quan rồi đưa cho LLM trả lời. Cập nhật dễ, rẻ, dẫn được nguồn.</p>
+        </div>
+        <div class="opt">
+          <span class="badge">Cách 3</span>
+          <h4>Nhét cả kho vào prompt</h4>
+          <p>Vượt giới hạn context, tốn tiền, độ chính xác giảm khi văn bản quá dài.</p>
+        </div>
+      </div>
+      <div class="why"><h3>Vì sao RAG</h3><p>Dữ liệu xã <strong>thay đổi mỗi ngày</strong>. RAG chỉ cần thêm/xoá vài bản ghi là cập nhật xong — thắng ngay ở tốc độ cập nhật, chi phí và khả năng dẫn nguồn.</p></div>
+    </section>
+
+    <!-- 6 WHAT IS RAG -->
+    <section class="slide" data-section="2 · Tổng quan RAG">
+      <div class="kicker"><span class="num">02</span> Tổng quan RAG</div>
+      <h2>RAG là gì?</h2>
+      <p class="lead"><strong class="accent">R</strong>etrieval — <strong class="accent">A</strong>ugmented — <strong class="accent">G</strong>eneration:<br>tìm đúng thông tin, tăng cường cho LLM, rồi sinh câu trả lời.</p>
+      <div class="card good-card" style="margin-top:12px">
+        <h3>Ẩn dụ: bài thi "mở sách"</h3>
+        <p style="margin:0; font-size:19px">LLM như một sinh viên giỏi nhưng <strong>chưa học bài về xã Bà Nà</strong>. RAG cho phép em ấy <strong>mở đúng trang tài liệu</strong> ra trước khi trả lời — thay vì trả lời theo trí nhớ mơ hồ.</p>
+      </div>
+    </section>
+
+    <!-- 7 ARCHITECTURE -->
+    <section class="slide" data-section="2 · Tổng quan RAG">
+      <div class="kicker"><span class="num">02</span> Kiến trúc</div>
+      <h2>Hai luồng dữ liệu</h2>
+      <div class="two">
+        <div class="card">
+          <h3><span class="tag">CHUẨN BỊ</span> Indexing</h3>
+          <div class="flow" style="margin-top:12px">
+            <div class="box">Excel · công văn · FAQ</div>
+            <div class="arrow">↓ Chunking</div>
+            <div class="box">Các đoạn nhỏ (chunks)</div>
+            <div class="arrow">↓ Embedding</div>
+            <div class="box hl">Vector Database</div>
+          </div>
+          <p style="font-size:14px; color:var(--muted); margin:12px 0 0">Làm <strong>một lần</strong> khi có dữ liệu mới.</p>
+        </div>
+        <div class="card">
+          <h3><span class="tag ok">KHI HỎI</span> Query</h3>
+          <div class="flow" style="margin-top:12px">
+            <div class="box">Câu hỏi của cán bộ</div>
+            <div class="arrow">↓ Embedding + Search</div>
+            <div class="box">Top-k đoạn liên quan nhất</div>
+            <div class="arrow">↓ Context + Câu hỏi</div>
+            <div class="box hl">LLM → Trả lời có nguồn</div>
+          </div>
+          <p style="font-size:14px; color:var(--muted); margin:12px 0 0">Làm <strong>mỗi lần</strong> có câu hỏi.</p>
+        </div>
+      </div>
+      <p style="margin-top:16px">Cùng một hàm <strong>embedding</strong> dùng ở cả hai phía — để so sánh câu hỏi với tài liệu được.</p>
+    </section>
+
+    <!-- 8 5 STEPS -->
+    <section class="slide" data-section="2 · Tổng quan RAG">
+      <div class="kicker"><span class="num">02</span> Quy trình 5 bước</div>
+      <h2>Nhớ nhanh: <span class="grad">Chia – Nhúng – Lưu – Tìm – Sinh</span></h2>
+      <div class="pipe" data-active="0"></div>
+      <div class="two" style="margin-top:6px">
+        <ul class="clean">
+          <li><strong class="gold">① Chia</strong> — cắt tài liệu thành đoạn nhỏ</li>
+          <li><strong class="gold">② Nhúng</strong> — biến mỗi đoạn thành vector số</li>
+          <li><strong class="gold">③ Lưu</strong> — cất vector vào Vector DB</li>
+        </ul>
+        <ul class="clean">
+          <li><strong class="gold">④ Tìm</strong> — tìm đoạn giống câu hỏi nhất</li>
+          <li><strong class="gold">⑤ Sinh</strong> — LLM viết câu trả lời từ các đoạn đó</li>
+        </ul>
+      </div>
+      <p style="margin-top:10px">Đây cũng đúng là 5 bước bạn sẽ thấy <strong>sáng dần</strong> trên giao diện demo.</p>
+    </section>
+
+    <!-- 9 STEP 1 -->
+    <section class="slide" data-section="2 · Tổng quan RAG">
+      <div class="pipe" data-active="1"></div>
+      <h2>Bước 1 — Chunking (Chia nhỏ)</h2>
+      <div class="two">
+        <div>
+          <p><strong>Vấn đề:</strong> một công văn nhiều trang không nhét nguyên vào LLM — giới hạn context, tốn tiền, càng dài càng dễ sai.</p>
+          <p><strong>Giải pháp:</strong> chia thành đoạn nhỏ (<em>chunk</em>), mỗi đoạn mang một ý trọn vẹn.</p>
+        </div>
+        <div class="card good-card">
+          <h3>Với Excel báo cáo</h3>
+          <p style="margin:0; font-size:18px">Mỗi <strong>dòng</strong> (1 thôn + 1 tiêu chí + giá trị) là <strong>một chunk tự nhiên</strong> — vốn đã tách sẵn theo cấu trúc bảng.</p>
+        </div>
+      </div>
+      <p><span class="crit">Gộp cả 22 thôn vào 1 chunk</span> → loãng, AI khó tìm đúng thôn. <span class="crit">Chunk chỉ 1 con số</span> → mất tên thôn/tiêu chí đi kèm.</p>
+    </section>
+
+    <!-- 10 TECH: CHUNK STRATEGY -->
+    <section class="slide" data-section="Kỹ thuật">
+      <div class="kicker"><span class="num">K1</span> Kỹ thuật · Chunk strategy</div>
+      <h2>Các chiến lược chia chunk — ta chọn gì?</h2>
+      <div class="opts four">
+        <div class="opt chosen"><span class="badge">DEMO · LỚP 1</span><h4>Structural (theo dòng)</h4><p><code>extract.js</code> tách mỗi dòng Excel thành 1 record trọn vẹn — mỗi dòng đã là một chunk.</p></div>
+        <div class="opt pick2"><span class="badge">DEMO · LỚP 2</span><h4>Fixed-size + overlap</h4><p><code>chunkText</code> chỉ cắt khi một đoạn dài quá 1800 ký tự (vd công văn PDF), overlap 160.</p></div>
+        <div class="opt"><span class="badge">CÓ SẴN</span><h4>Semantic</h4><p>Dùng embedding gom các câu cùng ý thành 1 chunk. Thông minh nhưng tốn tài nguyên.</p></div>
+        <div class="opt"><span class="badge">CÓ SẴN</span><h4>Recursive</h4><p>Chia theo cấp: đoạn → câu → cụm. Cân bằng cho văn bản dài phức tạp.</p></div>
+      </div>
+      <div class="why">
+        <h3>Hai lớp làm việc cùng nhau</h3>
+        <ul class="clean">
+          <li><strong>Lớp 1 — Structural (<code>extract.js</code>):</strong> mỗi dòng Excel → 1 record (thôn + tiêu chí + giá trị). Đây là thứ giúp câu hỏi về một thôn tìm trúng ngay.</li>
+          <li><strong>Lớp 2 — Fixed-size + overlap (<code>chunkText</code>):</strong> chỉ kích hoạt khi một đoạn <strong>dài quá <code>1800</code> ký tự</strong>, overlap <code>160</code>, ưu tiên cắt tại <code>" | "</code>.</li>
+          <li>Với Excel: đoạn ngắn nên gần như luôn <strong>1 dòng = 1 chunk</strong>; chỉ văn bản dài mới bị cắt nhỏ.</li>
+        </ul>
+      </div>
+      <p style="font-size:14.5px; color:var(--muted); margin:0 0 8px"><strong>Lớp 2 — <code>chunkText</code></strong>: đoạn ngắn trả về nguyên vẹn, chỉ cắt fixed-size khi quá dài:</p>
+      <pre class="code sm" id="c-chunk"></pre>
+      <script type="text/x-code" data-for="c-chunk">function chunkText(text, cfg) {
+  if (text.length <= cfg.maxChunkChars) return [text];
+  const chunks = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = start + cfg.maxChunkChars;
+    if (end >= text.length) { chunks.push(text.slice(start)); break; }
+    let splitAt = text.lastIndexOf(" | ", end);
+    if (splitAt <= start) splitAt = text.lastIndexOf(" ", end);
+    if (splitAt > start) end = splitAt;
+    chunks.push(text.slice(start, end).trim());
+    start = end - cfg.chunkOverlap;
+  }
+  return chunks;
+}</script>
+    </section>
+
+    <!-- 11 STEP 2 EMBEDDING -->
+    <section class="slide" data-section="2 · Tổng quan RAG">
+      <div class="pipe" data-active="2"></div>
+      <h2>Bước 2 — Embedding</h2>
+      <p><strong>Embedding</strong> = biến văn bản thành một <strong>vector số nhiều chiều</strong>, sao cho văn bản gần nghĩa thì vector gần nhau.</p>
+      <div class="two wl">
+        <div class="card good-card">
+          <h3>Ẩn dụ: tọa độ GPS của ý nghĩa</h3>
+          <p style="margin:0; font-size:18px">Câu hỏi <em>"thôn nào chưa nộp báo cáo?"</em> có "tọa độ" <strong>gần</strong> đoạn về tiến độ nộp, và <strong>xa</strong> công văn về chính sách hỗ trợ.</p>
+        </div>
+        <div style="text-align:center">
+          <div class="bignum grad">3072</div>
+          <p style="margin:6px 0 0; color:var(--muted); font-size:16px">số chiều mỗi vector<br>(<code>gemini-embedding-001</code>)</p>
+        </div>
+      </div>
+      <p>Embedding áp cho <strong>cả hai phía</strong>: tài liệu (lúc lưu) và câu hỏi (lúc hỏi) — để so sánh được với nhau.</p>
+    </section>
+
+    <!-- 12 STEP 3 VECTOR DB -->
+    <section class="slide" data-section="2 · Tổng quan RAG">
+      <div class="pipe" data-active="3"></div>
+      <h2>Bước 3 — Vector Database</h2>
+      <div class="two">
+        <div>
+          <p>Cơ sở dữ liệu chuyên lưu &amp; tìm trên <strong>vector</strong>.</p>
+          <p><strong>Khác DB thường ở đâu?</strong></p>
+          <ul class="clean">
+            <li>SQL: khớp <strong>chính xác</strong> — <code>WHERE ten='Hòa Ninh'</code></li>
+            <li>Vector DB: theo <strong>độ tương đồng</strong> — hợp câu hỏi tự nhiên, không đúng 100% từ khóa</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Trong demo này</h3>
+          <p style="margin:0; font-size:17px">Vector DB là một <strong>file JSON</strong> chứa mảng {đoạn văn + vector}, cộng một hàm cosine tự viết.</p>
+          <p style="margin:12px 0 0; color:var(--muted); font-size:15px">Đơn giản, chạy <code>npm start</code> là xong, và mở file ra là thấy rõ "vector DB" chứa gì.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 STEP 4 SEARCH -->
+    <section class="slide" data-section="2 · Tổng quan RAG">
+      <div class="pipe" data-active="4"></div>
+      <h2>Bước 4 — Similarity Search</h2>
+      <p class="lead" style="margin-bottom:18px">Câu hỏi → vector → tìm trong kho các đoạn có vector <strong>gần nhất</strong>.</p>
+      <div class="two">
+        <div class="card"><h3>Tham số then chốt</h3><p style="margin:0; font-size:19px"><code>top_k</code> = số đoạn lấy ra. Demo dùng <strong>top_k = 8</strong>.</p></div>
+        <div class="card"><h3>Điều cần nhớ</h3><p style="margin:0">Search <strong>không hiểu ngôn ngữ</strong> như người — nó so sánh <strong>khoảng cách toán học</strong> giữa các vector.</p></div>
+      </div>
+      <p>→ Độ chính xác phụ thuộc rất nhiều vào <strong>chất lượng chunking &amp; embedding</strong> ở bước trước.</p>
+    </section>
+
+    <!-- 14 TECH: COSINE -->
+    <section class="slide" data-section="Kỹ thuật">
+      <div class="kicker"><span class="num">K2</span> Kỹ thuật · Đo tương đồng</div>
+      <h2>Đo "gần nhau" thế nào — vì sao Cosine?</h2>
+      <div class="opts">
+        <div class="opt chosen"><span class="badge">DEMO DÙNG</span><h4>Cosine similarity</h4><p>Đo <strong>góc</strong> giữa 2 vector — chỉ quan tâm hướng (chủ đề), bỏ qua độ lớn.</p></div>
+        <div class="opt"><span class="badge">CÓ SẴN</span><h4>Euclidean distance</h4><p>Khoảng cách thẳng giữa 2 điểm. Nhạy với độ lớn / độ dài văn bản.</p></div>
+        <div class="opt"><span class="badge">CÓ SẴN</span><h4>Dot product</h4><p>Tích vô hướng. Nhanh nhưng phụ thuộc độ lớn vector.</p></div>
+      </div>
+      <div class="two wl">
+        <div>
+          <div class="formula">cos(θ) = (A · B) / (<span class="b">‖A‖</span> · <span class="b">‖B‖</span>)</div>
+          <pre class="code sm" id="c-cosinefn"></pre>
+          <script type="text/x-code" data-for="c-cosinefn">function cosineSimilarity(a, b) {
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}</script>
+        </div>
+        <div>
+          <svg viewBox="0 0 220 180" width="100%" style="max-width:260px">
+            <line x1="20" y1="160" x2="200" y2="160" stroke="var(--line-strong)" stroke-width="1.5"/>
+            <line x1="20" y1="160" x2="20" y2="10" stroke="var(--line-strong)" stroke-width="1.5"/>
+            <line x1="20" y1="160" x2="185" y2="55" stroke="var(--accent)" stroke-width="3"/>
+            <line x1="20" y1="160" x2="120" y2="30" stroke="var(--gold)" stroke-width="3"/>
+            <path d="M 78 122 A 66 66 0 0 1 96 108" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+            <text x="88" y="118" font-size="13" fill="var(--muted)" font-family="var(--font-mono)">θ</text>
+            <text x="150" y="70" font-size="12" fill="var(--accent)" font-family="var(--font-mono)">tài liệu</text>
+            <text x="92" y="26" font-size="12" fill="var(--gold)" font-family="var(--font-mono)">câu hỏi</text>
+          </svg>
+          <p style="font-size:14.5px; color:var(--muted); margin:6px 0 0">Góc θ càng nhỏ → càng cùng chủ đề → cosine càng gần <strong>1</strong>.</p>
+        </div>
+      </div>
+      <div class="why"><h3>Vì sao Cosine</h3><p>Câu hỏi ngắn và đoạn văn dài có <strong>độ lớn vector khác nhau</strong>, nhưng điều ta cần là "cùng nói về gì" — tức <strong>hướng</strong>. Cosine bỏ qua độ dài, cho điểm chuẩn hóa dễ đặt ngưỡng và dễ giải thích.</p></div>
+    </section>
+
+    <!-- 15 TECH: RETRIEVAL / RERANK -->
+    <section class="slide" data-section="Kỹ thuật">
+      <div class="kicker"><span class="num">K3</span> Kỹ thuật · Truy xuất &amp; Rerank</div>
+      <h2>Xếp hạng kết quả — vì sao Hybrid?</h2>
+      <div class="opts four">
+        <div class="opt"><span class="badge">CÓ SẴN</span><h4>Dense / Vector</h4><p>Hiểu ngữ nghĩa, đồng nghĩa. Nhưng dễ trượt tên riêng, mã số.</p></div>
+        <div class="opt"><span class="badge">CÓ SẴN</span><h4>Sparse / Keyword (BM25)</h4><p>Khớp từ khóa chính xác. Nhưng không hiểu cách diễn đạt khác.</p></div>
+        <div class="opt chosen"><span class="badge">DEMO DÙNG</span><h4>Hybrid + Rerank nhẹ</h4><p>Cosine (ngữ nghĩa) <strong>+</strong> điểm khớp từ khóa, rồi xếp lại theo tổng điểm.</p></div>
+        <div class="opt"><span class="badge">NÂNG CẤP</span><h4>Cross-encoder rerank</h4><p>Model chấm lại top-N — chính xác nhất nhưng chậm &amp; tốn. Hướng mở rộng sau.</p></div>
+      </div>
+      <div class="two wl">
+        <div>
+          <pre class="code sm" id="c-retrieve"></pre>
+          <script type="text/x-code" data-for="c-retrieve">const qVec = (await embedTexts([query], cfg, "RETRIEVAL_QUERY"))[0];
+
+const scored = items.map((item) => {
+  const vectorScore = cosineSimilarity(qVec, item.embedding);
+  const lexScore = lexicalScore(query, item.text);
+  return { ...item, score: vectorScore + lexScore };
+});
+scored.sort((a, b) => b.score - a.score);
+return scored.slice(0, cfg.topK);</script>
+          <pre class="code sm" id="c-lexical"></pre>
+          <script type="text/x-code" data-for="c-lexical">function lexicalScore(query, doc) {
+  const q = normalizeForSearch(query);
+  const d = normalizeForSearch(doc);
+  let score = 0;
+  if (d.includes(q)) score += 5;
+  for (const token of q.split(" ")) {
+    if (d.includes(token)) score += 1;
+  }
+  return score;
+}</script>
+        </div>
+        <div class="why" style="align-self:start">
+          <h3>Vì sao Hybrid</h3>
+          <ul class="clean">
+            <li>Câu hỏi tiếng Việt hay chứa <strong>tên thôn / mã</strong> ("Hòa Trung", "CT05") — vector đôi khi xếp chưa trúng.</li>
+            <li>Cộng điểm <strong>khớp từ khóa</strong> kéo đúng dòng lên đầu.</li>
+            <li><strong>Nhẹ</strong>, không cần model rerank riêng → hợp demo &amp; chi phí thấp.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 STEP 5 GEN -->
+    <section class="slide" data-section="2 · Tổng quan RAG">
+      <div class="pipe" data-active="5"></div>
+      <h2>Bước 5 — Sinh câu trả lời</h2>
+      <div class="two wl">
+        <ul class="clean">
+          <li>Lấy các đoạn liên quan nhất (context) từ bước 4</li>
+          <li>Ghép <strong>context + câu hỏi</strong> thành một prompt</li>
+          <li>Gửi cho LLM (<code>gemini-3.1-flash-lite</code>) sinh câu trả lời</li>
+        </ul>
+        <div class="card">
+          <h3>Prompt — "van an toàn"</h3>
+          <p style="margin:0; font-family:var(--font-mono); font-size:13.5px; line-height:1.55">Trả lời <strong>CHỈ dựa trên</strong> "Ngữ cảnh" dưới đây. Nếu không tìm thấy, hãy nói <em>"KHÔNG TÌM THẤY"</em>, không bịa.</p>
+        </div>
+      </div>
+      <p>Chính câu <strong class="accent">"CHỈ dựa trên ngữ cảnh"</strong> là thứ chặn AI bịa — phần workshop sẽ chứng minh trực tiếp.</p>
+    </section>
+
+    <!-- 17 STACK -->
+    <section class="slide" data-section="3 · Công nghệ">
+      <div class="kicker"><span class="num">03</span> Công nghệ &amp; công cụ</div>
+      <h2>Bộ công cụ chúng ta dùng</h2>
+      <table class="grid">
+        <tr><th style="width:190px">Vai trò</th><th>Công cụ</th><th>Ghi chú</th></tr>
+        <tr><td>Ngôn ngữ</td><td><code>Node.js</code></td><td>Cú pháp gọn, dễ đọc cho sinh viên</td></tr>
+        <tr><td>Embedding + LLM</td><td><code>@google/genai</code> — Gemini</td><td>embedding-001 (3072d) + 3.1-flash-lite</td></tr>
+        <tr><td>Vector DB</td><td>File JSON + cosine tự viết</td><td>Nhìn thấy rõ vector DB chứa gì</td></tr>
+        <tr><td>Đọc dữ liệu</td><td><code>xlsx</code>, <code>pdf-parse</code></td><td>Excel &amp; PDF → text</td></tr>
+        <tr><td>Web server + UI</td><td><code>express</code>, <code>multer</code>, <code>marked</code></td><td>API + giao diện, render markdown</td></tr>
+      </table>
+      <pre class="code sm" id="c-config"></pre>
+      <script type="text/x-code" data-for="c-config">module.exports = {
+  genModel: "gemini-3.1-flash-lite",
+  embedModel: "gemini-embedding-001",
+  storePath: "./store/vectors.json",
+  maxChunkChars: 1800,
+  chunkOverlap: 160,
+  topK: 8,
+};</script>
+    </section>
+
+    <!-- 18 TREE -->
+    <section class="slide" data-section="3 · Công nghệ">
+      <div class="kicker"><span class="num">03</span> Cấu trúc dự án</div>
+      <h2>Mỗi file = một bước RAG</h2>
+      <div class="tree">
+demo-rag/
+├── data/                  <span class="c"># Excel báo cáo mẫu</span>
+├── src/
+│   ├── extract.js         <span class="c"># đọc Excel/PDF → records</span>
+│   ├── chunk.js           <span class="c"># ① Chia nhỏ</span>
+│   ├── gemini.js          <span class="c"># ② Nhúng + ⑤ Sinh</span>
+│   ├── store.js           <span class="c"># ③ Vector DB (JSON + cosine)</span>
+│   └── rag.js             <span class="c"># ghép 5 bước + ④ Tìm kiếm</span>
+├── public/                <span class="c"># giao diện web</span>
+├── store/vectors.json     <span class="c"># kho vector (tự sinh)</span>
+├── config.js              <span class="c"># model, chunk size, top-k</span>
+├── server.js              <span class="c"># Express server + API</span>
+└── .env                   <span class="c"># GEMINI_API_KEY (không commit)</span>
+      </div>
+    </section>
+
+    <!-- 19 INSTALL + ENV -->
+    <section class="slide" data-section="3 · Công nghệ">
+      <div class="kicker"><span class="num">03</span> Cài đặt &amp; API Key</div>
+      <h2>Sẵn sàng trong 2 lệnh</h2>
+      <div class="two">
+        <div>
+          <h3>Cài thư viện</h3>
+          <pre class="code" id="c-install"></pre>
+          <script type="text/x-code" data-for="c-install">npm install express multer xlsx \
+  pdf-parse @google/genai dotenv marked</script>
+        </div>
+        <div>
+          <h3>Khóa API — không hardcode</h3>
+          <pre class="code" id="c-env"></pre>
+          <script type="text/x-code" data-for="c-env">GEMINI_API_KEY=your-api-key-here</script>
+          <pre class="code" id="c-envjs"></pre>
+          <script type="text/x-code" data-for="c-envjs">require("dotenv").config();
+const key = process.env.GEMINI_API_KEY;</script>
+        </div>
+      </div>
+      <p>Luôn để khóa trong <code>.env</code> và thêm <code>.env</code> vào <code>.gitignore</code> — đây cũng là yêu cầu bảo mật khi triển khai thật.</p>
+    </section>
+
+    <!-- 20 WORKSHOP INTRO -->
+    <section class="slide hero" data-section="4 · Workshop">
+      <div class="title-wrap">
+        <div class="kicker"><span class="num">04</span> Hands-on Workshop</div>
+        <h1>Bạn sắp tự tay xây<br><span class="grad">trợ lý AI tra cứu cho xã Bà Nà</span></h1>
+        <p class="lead">Một chatbot RAG thu nhỏ: tra cứu tiến độ nộp báo cáo của 22 thôn, trả lời câu hỏi nghiệp vụ — <strong>và không bịa số liệu</strong>.</p>
+        <div class="title-meta">
+          <span class="tag ok">6 bước code</span>
+          <span class="tag ok">Chạy live</span>
+          <span class="tag">Sửa &amp; xem kết quả đổi ngay</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 21 CODE EXTRACT -->
+    <section class="slide" data-section="4 · Workshop">
+      <div class="pipe" data-active="1"></div>
+      <h2>Đọc Excel → records</h2>
+      <div class="two wl">
+        <div>
+          <pre class="code sm" id="c-extract"></pre>
+          <script type="text/x-code" data-for="c-extract">function excelToRecords(filePath, base) {
+  const wb = XLSX.readFile(filePath);
+  const records = [];
+  for (const sheetName of wb.SheetNames) {
+    const grid = XLSX.utils.sheet_to_json(
+      wb.Sheets[sheetName], { header: 1, defval: "" });
+    const headerIdx = findHeaderRow(grid);
+    const header = grid[headerIdx].map(cleanCell);
+
+    for (let r = headerIdx + 1; r < grid.length; r++) {
+      const row = grid[r].map(cleanCell);
+      const parts = [`Sheet: ${sheetName}`, `Dòng: ${r + 1}`];
+      for (let c = 0; c < header.length; c++) {
+        if (header[c] && row[c]) parts.push(`${header[c]}: ${row[c]}`);
+      }
+      records.push({ noi_dung: parts.join(" | "),
+        nguon_file: base, sheet: sheetName, row: r + 1 });
+    }
+  }
+  return records;
+}</script>
+        </div>
+        <div class="card">
+          <h3>Đang xảy ra gì?</h3>
+          <ul class="explain">
+            <li><code>header: 1</code> → đọc sheet thành lưới 2 chiều</li>
+            <li>Tự dò dòng tiêu đề rồi ghép <code>Cột: giá trị</code></li>
+            <li>Mỗi dòng Excel → 1 <strong>record</strong> mang đủ ngữ cảnh</li>
+            <li>Giữ <strong>nguồn</strong> (sheet, dòng) để dẫn chứng sau này</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 22 CODE EMBED -->
+    <section class="slide" data-section="4 · Workshop">
+      <div class="pipe" data-active="2"></div>
+      <h2>Nhúng văn bản thành vector</h2>
+      <div class="two wl">
+        <div>
+          <pre class="code sm" id="c-embed"></pre>
+          <script type="text/x-code" data-for="c-embed">const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+async function embedTexts(texts, cfg, taskType) {
+  const all = [];
+  for (let i = 0; i < texts.length; i += 80) {
+    const res = await ai.models.embedContent({
+      model: cfg.embedModel,
+      contents: texts.slice(i, i + 80),
+      config: { taskType },
+    });
+    for (const item of res.embeddings) all.push(item.values);
+  }
+  return all;
+}</script>
+        </div>
+        <div class="card">
+          <h3>Đang xảy ra gì?</h3>
+          <ul class="explain">
+            <li><code>taskType</code>: <code>RETRIEVAL_DOCUMENT</code> khi lưu, <code>RETRIEVAL_QUERY</code> khi hỏi</li>
+            <li>Gọi theo <strong>lô 80</strong> để nhanh hơn</li>
+            <li>Mỗi text → vector <strong>3072 số</strong> trong <code>item.values</code></li>
+          </ul>
+          <p style="font-size:14px; color:var(--muted); margin:10px 0 0">Thử <code>console.log(vec.length)</code> → thấy 3072.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 23 CODE STORE -->
+    <section class="slide" data-section="4 · Workshop">
+      <div class="pipe" data-active="3"></div>
+      <h2>Lưu vào Vector DB (JSON)</h2>
+      <div class="two wl">
+        <div>
+          <pre class="code sm" id="c-store"></pre>
+          <script type="text/x-code" data-for="c-store">function storeChunks(chunks, embeddings, cfg) {
+  let items = loadStore(cfg.storePath);
+  const files = new Set(chunks.map((c) => c.file));
+  items = items.filter((item) => !files.has(item.file));
+
+  for (let i = 0; i < chunks.length; i++) {
+    items.push({ ...chunks[i], embedding: embeddings[i] });
+  }
+  saveStore(cfg.storePath, items);
+  return chunks.length;
+}</script>
+        </div>
+        <div class="card">
+          <h3>Đang xảy ra gì?</h3>
+          <ul class="explain">
+            <li>Đọc kho vector hiện có từ <code>vectors.json</code></li>
+            <li>Xoá dữ liệu cũ cùng file → nạp lại không trùng</li>
+            <li>Mỗi mục = đoạn văn + <strong>vector</strong> đi kèm</li>
+            <li>Ghi lại ra JSON — <strong>đó chính là "vector DB"</strong></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 24 CODE GEN -->
+    <section class="slide" data-section="4 · Workshop">
+      <div class="pipe" data-active="5"></div>
+      <h2>Sinh câu trả lời từ context</h2>
+      <div class="two wl">
+        <div>
+          <pre class="code sm" id="c-gen"></pre>
+          <script type="text/x-code" data-for="c-gen">function buildPrompt(chunks, question) {
+  const context = chunks
+    .map((c, i) => `[Nguồn ${i + 1}: ${c.nguon_file}]\n${c.noi_dung}`)
+    .join("\n\n");
+
+  return `Dựa trên NGỮ CẢNH dưới đây, hãy trả lời câu hỏi.
+
+NGỮ CẢNH:
+${context}
+
+CÂU HỎI: ${question}
+
+- Chỉ trả lời dựa trên NGỮ CẢNH.
+- Nếu không có, hãy nói "KHÔNG TÌM THẤY", không bịa.`;
+}
+
+async function answerFromChunks(question, chunks, cfg) {
+  const res = await ai.models.generateContent({
+    model: cfg.genModel,
+    contents: buildPrompt(chunks, question),
+    config: { temperature: 0 },
+  });
+  return res.text.trim();
+}</script>
+        </div>
+        <div class="card">
+          <h3>Đang xảy ra gì?</h3>
+          <ul class="explain">
+            <li>Ghép top-k đoạn thành <strong>NGỮ CẢNH</strong> có đánh số nguồn</li>
+            <li>Prompt buộc trả lời <strong>chỉ dựa trên ngữ cảnh</strong></li>
+            <li><code>temperature: 0</code> → ổn định, ít bịa</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 25 PIPELINE + RUN -->
+    <section class="slide" data-section="4 · Workshop">
+      <div class="pipe" data-active="0"></div>
+      <h2>Ghép 5 bước &amp; chạy live</h2>
+      <div class="two wl">
+        <div>
+          <pre class="code sm" id="c-pipeline"></pre>
+          <script type="text/x-code" data-for="c-pipeline">async function ingestRecords(records, cfg) {
+  const chunks = buildChunks(records, cfg);
+  const embeddings = await embedTexts(
+    chunks.map((c) => c.text), cfg, "RETRIEVAL_DOCUMENT");
+  storeChunks(chunks, embeddings, cfg);
+}
+
+const chunks = await retrieve(question, cfg);
+const answer = await answerFromChunks(question, chunks, cfg);</script>
+          <pre class="code sm" id="c-server"></pre>
+          <script type="text/x-code" data-for="c-server">app.post("/api/ask", async (req, res) => {
+  const chunks = await rag.retrieve(req.body.question, cfg);
+  const result = await rag.answerFromChunks(
+    req.body.question, chunks, cfg);
+  res.json({ answer: result.answer, chunks });
+});</script>
+        </div>
+        <div class="card">
+          <h3>5 bước → code</h3>
+          <ul class="explain">
+            <li><span class="gold">①②③</span> <code>ingestRecords</code>: Chia → Nhúng → Lưu</li>
+            <li><span class="gold">④</span> <code>retrieve</code>: Tìm (hybrid)</li>
+            <li><span class="gold">⑤</span> <code>answerFromChunks</code>: Sinh</li>
+          </ul>
+          <p style="margin:14px 0 0; font-size:15px"><strong>Chạy:</strong> <code>npm start</code> → mở <code>localhost:3000</code></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 26 PROOF -->
+    <section class="slide" data-section="4 · Workshop">
+      <div class="kicker"><span class="num">04</span> Khoảnh khắc "wow"</div>
+      <h2>Có RAG vs. hỏi thẳng AI</h2>
+      <div class="two">
+        <div class="card good-card">
+          <h3>Có RAG — dựa trên dữ liệu xã</h3>
+          <p style="margin:0"><em>"Thôn Hòa Trung có bao nhiêu hộ nghèo?"</em></p>
+          <p style="margin:12px 0 0; font-size:19px"><strong>→ "12 hộ nghèo (Nguồn: BC_T17…, dòng 16)."</strong></p>
+        </div>
+        <div class="card warn-card">
+          <h3>Hỏi thứ không có trong dữ liệu</h3>
+          <p style="margin:0">Hỏi một thôn <strong>không tồn tại</strong> → hệ thống trả <em>"KHÔNG TÌM THẤY"</em> thay vì bịa.</p>
+        </div>
+      </div>
+      <p style="margin-top:20px">Giao diện demo còn cho thấy: 5 bước <strong>sáng dần</strong>, <strong>xem chunks</strong> kèm vector, <strong>thanh điểm số</strong> mỗi đoạn, và câu trả lời <strong>render markdown</strong>.</p>
+    </section>
+
+    <!-- 27 RECAP -->
+    <section class="slide" data-section="5 · Tổng kết">
+      <div class="kicker"><span class="num">05</span> Ôn nhanh</div>
+      <h2>Bạn nhớ được mấy bước?</h2>
+      <div class="pipe" data-active="0"></div>
+      <div class="mnemonic" style="margin-top:8px">
+        <span class="gold">Chia</span><span class="sep">→</span>
+        <span class="gold">Nhúng</span><span class="sep">→</span>
+        <span class="gold">Lưu</span><span class="sep">→</span>
+        <span class="gold">Tìm</span><span class="sep">→</span>
+        <span class="gold">Sinh</span>
+      </div>
+      <p class="lead" style="margin-top:20px">Thử tự vẽ lại sơ đồ 5 bước từ trí nhớ — đó là cách nhớ lâu nhất.</p>
+    </section>
+
+    <!-- 28 LLM VS DB -->
+    <section class="slide" data-section="5 · Tổng kết">
+      <div class="kicker"><span class="num">05</span> Phân vai</div>
+      <h2>LLM và Vector Database — ai làm gì?</h2>
+      <table class="grid">
+        <tr><th style="width:190px">Tiêu chí</th><th>LLM</th><th>Vector Database</th></tr>
+        <tr><td>Vai trò</td><td>Hiểu ngôn ngữ, sinh câu trả lời</td><td>Lưu &amp; tìm thông tin liên quan</td></tr>
+        <tr><td>"Nhớ" dữ liệu xã?</td><td class="no">Không (trừ khi fine-tune)</td><td class="yes">Có — lưu trực tiếp báo cáo</td></tr>
+        <tr><td>Cập nhật báo cáo mới</td><td class="no">Khó — train lại</td><td class="yes">Dễ — thêm/xoá vector</td></tr>
+        <tr><td>Chi phí</td><td class="no">Cao khi fine-tune</td><td class="yes">Thấp, linh hoạt</td></tr>
+      </table>
+      <p><strong class="accent">RAG dùng đúng thế mạnh mỗi bên</strong> — Vector DB "nhớ chính xác", LLM "diễn đạt &amp; suy luận".</p>
+    </section>
+
+    <!-- 29 MAP TO CONTEST -->
+    <section class="slide" data-section="5 · Tổng kết">
+      <div class="kicker"><span class="num">05</span> Ánh xạ vào đề bài</div>
+      <h2>RAG lo được phần nào của Ba Na SmartLink?</h2>
+      <table class="grid">
+        <tr><th style="width:46%">Yêu cầu đề bài</th><th>Vai trò của RAG</th></tr>
+        <tr><td>Chatbot AI tra cứu &amp; hỏi đáp</td><td class="yes">Chính là RAG</td></tr>
+        <tr><td>Kho dữ liệu số dùng chung</td><td class="yes">Vector DB + dữ liệu gốc là hạt nhân</td></tr>
+        <tr><td>Kiểm tra dữ liệu thiếu / sai định dạng</td><td class="no">Ngoài RAG — cần rule-based / function-calling</td></tr>
+        <tr><td>Tổng hợp số liệu, xuất Word/Excel/PDF</td><td class="no">Ngoài RAG — cần xử lý dữ liệu có cấu trúc</td></tr>
+        <tr><td>Độ chính xác của AI (tiêu chí #2)</td><td class="yes">Quyết định bởi chunking + embedding + rerank</td></tr>
+      </table>
+      <p>Từ Excel có thể mở rộng sang PDF, Word, cả Zalo — <strong>quy trình 5 bước giữ nguyên</strong>, chỉ khác ở bước đọc &amp; tiền xử lý.</p>
+    </section>
+
+    <!-- 30 CLOSING -->
+    <section class="slide hero" data-section="Kết thúc">
+      <div class="title-wrap">
+        <div class="kicker">Kết thúc</div>
+        <h1>Từ dấu <span class="grad">"???"</span><br>đến chatbot trả lời có nguồn</h1>
+        <p class="lead"><strong>Chia – Nhúng – Lưu – Tìm – Sinh.</strong> Năm bước đó là trái tim của module Chatbot AI — và giờ bạn đã tự tay dựng nó.</p>
+        <div class="title-meta"><span class="tag ok">Chúc bạn vào chung kết vững tay</span></div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="controls">
+    <button id="prevBtn">← Trước</button>
+    <button id="nextBtn">Sau →</button>
+    <button id="themeBtn">Đổi nền</button>
+    <span class="hint">Điều hướng: <kbd>←</kbd> <kbd>→</kbd> · Toàn màn hình: <kbd>F</kbd></span>
+  </div>
+</div>
+
+<script>
+  const STEPS = [
+    ["①", "Chunking", "Chia"],
+    ["②", "Embedding", "Nhúng"],
+    ["③", "Vector DB", "Lưu"],
+    ["④", "Similarity", "Tìm"],
+    ["⑤", "Generate", "Sinh"],
+  ];
+  document.querySelectorAll(".pipe").forEach((pipe) => {
+    const active = Number(pipe.dataset.active || 0);
+    STEPS.forEach((s, i) => {
+      const el = document.createElement("div");
+      el.className = "p" + (i + 1 === active ? " on" : "");
+      el.innerHTML = `<div class="n">${s[0]}</div><div class="en">${s[1]}</div><div class="vi">${s[2]}</div>`;
+      pipe.appendChild(el);
+    });
+  });
+
+  const KEYWORDS = new Set([
+    "const","let","var","function","return","async","await","for","of","in","if","else",
+    "while","break","continue","new","class","import","from","export","default","try",
+    "catch","throw","true","false","null","undefined","this","typeof","require",
+  ]);
+  function escapeHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function highlight(code) {
+    const patterns = [
+      ["com", /^\/\/[^\n]*/],
+      ["str", /^`[^`]*`|^"[^"]*"|^'[^']*'/],
+      ["ident", /^[A-Za-z_$][\w$]*/],
+      ["num", /^\d+(?:\.\d+)?/],
+      ["ws", /^\s+/],
+      ["other", /^[^\s]/],
+    ];
+    let out = "", i = 0;
+    while (i < code.length) {
+      const rest = code.slice(i);
+      for (const [type, re] of patterns) {
+        const m = rest.match(re);
+        if (!m) continue;
+        const t = m[0];
+        if (type === "com") out += `<span class="tok-com">${escapeHtml(t)}</span>`;
+        else if (type === "str") out += `<span class="tok-str">${escapeHtml(t)}</span>`;
+        else if (type === "num") out += `<span class="tok-num">${escapeHtml(t)}</span>`;
+        else if (type === "ident") out += KEYWORDS.has(t) ? `<span class="tok-key">${t}</span>` : t;
+        else out += escapeHtml(t);
+        i += t.length;
+        break;
+      }
+    }
+    return out;
+  }
+  document.querySelectorAll('script[type="text/x-code"]').forEach((sc) => {
+    const target = document.getElementById(sc.dataset.for);
+    if (target) target.innerHTML = highlight(sc.textContent.replace(/^\n/, "").replace(/\s+$/, ""));
+  });
+
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const cur = document.getElementById("cur");
+  const bar = document.getElementById("progressBar");
+  const sectionLabel = document.getElementById("sectionLabel");
+  let idx = 0;
+  document.getElementById("total").textContent = slides.length;
+
+  function show(n) {
+    idx = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => s.classList.toggle("active", i === idx));
+    cur.textContent = idx + 1;
+    bar.style.width = ((idx + 1) / slides.length) * 100 + "%";
+    sectionLabel.textContent = slides[idx].dataset.section || "RAG";
+    slides[idx].scrollTop = 0;
+  }
+  document.getElementById("nextBtn").onclick = () => show(idx + 1);
+  document.getElementById("prevBtn").onclick = () => show(idx - 1);
+  document.getElementById("themeBtn").onclick = () => {
+    const root = document.documentElement;
+    const isDark = root.getAttribute("data-theme") === "dark"
+      || (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    root.setAttribute("data-theme", isDark ? "light" : "dark");
+  };
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") { show(idx + 1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { show(idx - 1); e.preventDefault(); }
+    else if (e.key === "Home") { show(0); }
+    else if (e.key === "End") { show(slides.length - 1); }
+    else if (e.key.toLowerCase() === "f") {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+  show(0);
+</script>
